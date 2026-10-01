@@ -1,0 +1,112 @@
+using UnityEngine;
+
+public class PlayerMovement : MonoBehaviour
+{
+    public float moveSpeed = 6f;
+    public float jumpForce = 8f;
+    public float wallJumpForce = 8f;
+    public float wallJumpPush = 6f;
+
+    private Rigidbody rb;
+
+    private bool isGrounded;
+    private bool isTouchingWall;
+
+    private int jumpCount = 0;
+    public int maxJumps = 2;
+
+    private float horizontalInput;
+
+    void Start()
+    {
+        rb = GetComponent<Rigidbody>();
+    }
+
+    void Update()
+    {
+        // Get left/right input
+        horizontalInput = Input.GetAxisRaw("Horizontal");
+
+        // Walk
+        rb.linearVelocity = new Vector3(
+            horizontalInput * moveSpeed,
+            rb.linearVelocity.y,
+            0
+        );
+
+        // Jump
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            Jump();
+        }
+    }
+
+    void Jump()
+    {
+        // Normal jump / Double jump
+        if (isGrounded)
+        {
+            rb.linearVelocity = new Vector3(
+                rb.linearVelocity.x,
+                jumpForce,
+                0
+            );
+
+            jumpCount = 1;
+            isGrounded = false;
+        }
+        else if (jumpCount < maxJumps)
+        {
+            rb.linearVelocity = new Vector3(
+                rb.linearVelocity.x,
+                jumpForce,
+                0
+            );
+
+            jumpCount++;
+        }
+
+        // Wall jump
+        else if (isTouchingWall)
+        {
+            float wallDirection = -Mathf.Sign(transform.localScale.x);
+
+            rb.linearVelocity = new Vector3(
+                wallDirection * wallJumpPush,
+                wallJumpForce,
+                0
+            );
+
+            jumpCount = 1;
+        }
+    }
+
+    void OnCollisionEnter(Collision collision)
+    {
+        // Ground detection
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            isGrounded = true;
+            jumpCount = 0;
+        }
+
+        // Wall detection
+        foreach (ContactPoint contact in collision.contacts)
+        {
+            if (Mathf.Abs(contact.normal.x) > 0.7f)
+            {
+                isTouchingWall = true;
+            }
+        }
+    }
+
+    void OnCollisionExit(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            isGrounded = false;
+        }
+
+        isTouchingWall = false;
+    }
+}
