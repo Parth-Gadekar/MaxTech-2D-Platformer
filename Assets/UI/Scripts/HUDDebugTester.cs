@@ -23,7 +23,7 @@ namespace MaxTech.UI
         void Update()
         {
             Keyboard kb = Keyboard.current;
-            if (kb == null) return;
+            if (kb == null || PauseMenu.IsPaused) return;
 
             if (kb.digit1Key.wasPressedThisFrame) lives--;
             else if (kb.digit2Key.wasPressedThisFrame) lives++;
