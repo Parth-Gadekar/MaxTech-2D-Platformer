@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Ground
   - Wall
+  - NoGrapple
   layers:
   - Default
   - TransparentFX

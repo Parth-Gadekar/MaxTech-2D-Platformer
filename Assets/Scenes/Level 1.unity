@@ -785,7 +785,7 @@ GameObject:
   - component: {fileID: 217436389}
   m_Layer: 0
   m_Name: Stairway Junk
-  m_TagString: Untagged
+  m_TagString: NoGrapple
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1040,7 +1040,7 @@ Transform:
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
   m_LocalRotation: {x: 0.049813703, y: -5.847661e-11, z: 2.9165578e-12, w: 0.99875855}
-  m_LocalPosition: {x: 51.39, y: 32.17, z: -10}
+  m_LocalPosition: {x: -28.3, y: 31.4, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -8587,13 +8587,17 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
+    - target: {fileID: 6406729501489444126, guid: 16bb210616bfe4e419789c11b51389c9, type: 3}
+      propertyPath: playerCamera
+      value: 
+      objectReference: {fileID: 330585545}
     - target: {fileID: 6954226232248814335, guid: 16bb210616bfe4e419789c11b51389c9, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 48.39
+      value: -31.3
       objectReference: {fileID: 0}
     - target: {fileID: 6954226232248814335, guid: 16bb210616bfe4e419789c11b51389c9, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 28.17
+      value: 27.4
       objectReference: {fileID: 0}
     - target: {fileID: 6954226232248814335, guid: 16bb210616bfe4e419789c11b51389c9, type: 3}
       propertyPath: m_LocalPosition.z
