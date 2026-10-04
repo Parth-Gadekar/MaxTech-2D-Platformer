@@ -31,11 +31,25 @@ public class PlayerMovement : MonoBehaviour
     [Header("Wall Slide")]
     public float wallSlideSpeed = -3f;
 
+    [Header("Wall Jump")]
+    public float wallJumpForceX = 8f;
+    public float wallJumpForceY = 12f;
+    public float wallJumpBuffer = 0.2f;
+    public float wallJumpLockTime = 0.15f;
+
+    private float wallJumpCounter;
+    private float wallJumpLockCounter;
+
+    private bool isWallJumping;
+    private bool isWallSliding;
+
     private Rigidbody rb;
 
     private bool isGrounded;
     private bool wasGrounded;
     private bool isTouchingWall;
+    private bool isWallLeft;
+    private bool isWallRight;
 
     private int jumpsRemaining;
 
@@ -58,6 +72,7 @@ public class PlayerMovement : MonoBehaviour
 
         CheckGround();
         CheckWall();
+        WallJump();
         HandleJumpInput();
     }
 
@@ -121,6 +136,9 @@ public class PlayerMovement : MonoBehaviour
         float targetSpeed = moveInput * moveSpeed;
 
         float accelRate;
+
+        if (isWallJumping)
+            return;
 
         if (isGrounded)
         {
@@ -188,6 +206,9 @@ public class PlayerMovement : MonoBehaviour
                 jumpBufferCounter = 0;
             }
         }
+
+        if (isWallJumping)
+            return;
     }
 
     void PerformJump()
@@ -245,30 +266,84 @@ public class PlayerMovement : MonoBehaviour
 
     void CheckWall()
     {
-        isTouchingWall =
-            Physics.Raycast(
-                transform.position,
-                transform.right,
-                0.3f
-            )
-            ||
-            Physics.Raycast(
-                transform.position,
-                -transform.right,
-                0.3f
-            );
+        isWallRight = Physics.Raycast(
+            transform.position,
+            transform.right,
+            1.2f
+        );
 
-        if (
+        isWallLeft = Physics.Raycast(
+            transform.position,
+            -transform.right,
+            1.2f
+        );
+
+        bool pressingIntoWall =
+            (isWallRight && moveInput > 0) ||
+            (isWallLeft && moveInput < 0);
+
+        isTouchingWall =
+            isWallLeft || isWallRight;
+
+        isWallSliding =
             isTouchingWall &&
+            pressingIntoWall &&
             !isGrounded &&
-            rb.linearVelocity.y < wallSlideSpeed
-        )
+            rb.linearVelocity.y < 0;
+
+        if (isWallSliding)
         {
+            wallJumpCounter = wallJumpBuffer;
+
             rb.linearVelocity = new Vector3(
                 rb.linearVelocity.x,
                 wallSlideSpeed,
                 0f
             );
         }
+        else
+        {
+            wallJumpCounter -= Time.deltaTime;
+        }
     }
+
+    void WallJump()
+    {
+        if (jumpPressed &&
+            wallJumpCounter > 0)
+        {
+            isWallJumping = true;
+
+            wallJumpLockCounter =
+                wallJumpLockTime;
+
+            float direction =
+                isWallLeft ? 1f : -1f;
+
+            rb.linearVelocity = Vector3.zero;
+
+            rb.AddForce(
+                new Vector3(
+                    direction * wallJumpForceX,
+                    wallJumpForceY,
+                    0f
+                ),
+                ForceMode.Impulse
+            );
+
+            wallJumpCounter = 0;
+        }
+
+        if (isWallJumping)
+        {
+            wallJumpLockCounter -=
+                Time.deltaTime;
+
+            if (wallJumpLockCounter <= 0)
+            {
+                isWallJumping = false;
+            }
+        }
+    }
+
 }
