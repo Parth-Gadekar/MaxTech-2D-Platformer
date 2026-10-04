@@ -1,0 +1,53 @@
+using UnityEngine;
+
+public class GrapplingHook : MonoBehaviour
+{
+    public float grappleRange = 10f;
+    public float pullSpeed = 12f;
+
+    private Rigidbody rb;
+    private Vector3 grapplePoint;
+    private bool grappling = false;
+
+    void Start()
+    {
+        rb = GetComponent<Rigidbody>();
+    }
+
+    void Update()
+    {
+        if (Input.GetMouseButtonDown(1))
+        {
+            StartGrapple();
+        }
+
+        if (Input.GetMouseButtonUp(1))
+        {
+            StopGrapple();
+        }
+    }
+    void FixedUpdate()
+    {
+        if (grappling)
+        {
+           Vector3 direction = (grapplePoint - transform.position).normalized;
+
+            rb.linearVelocity = direction * pullSpeed;
+
+            if (Vector3.Distance(transform.position, grapplePoint) < 1f)
+            {
+                StopGrapple();
+            }
+        }
+    }
+    void StartGrapple()
+    {
+        // Temporary target point in front of player
+        grapplePoint = transform.position + transform.forward * grappleRange;
+        grappling = true;
+    }
+    void StopGrapple()
+    {
+        grappling = false;
+    }
+}
