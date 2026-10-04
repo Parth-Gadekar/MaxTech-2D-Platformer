@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -41,6 +42,10 @@ public class PlayerMovement : MonoBehaviour
     private float coyoteCounter;
     private float jumpBufferCounter;
 
+    private float moveInput;
+    private bool jumpPressed;
+    private bool jumpHeld;
+
     void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -49,6 +54,8 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
+        ReadInput();
+
         CheckGround();
         CheckWall();
         HandleJumpInput();
@@ -58,6 +65,24 @@ public class PlayerMovement : MonoBehaviour
     {
         Move();
         BetterJump();
+    }
+
+    void ReadInput()
+    {
+        moveInput = 0f;
+        jumpPressed = false;
+        jumpHeld = false;
+
+        if (Keyboard.current == null)
+            return;
+
+        if (Keyboard.current.aKey.isPressed)
+            moveInput = -1f;
+        else if (Keyboard.current.dKey.isPressed)
+            moveInput = 1f;
+
+        jumpPressed = Keyboard.current.spaceKey.wasPressedThisFrame;
+        jumpHeld = Keyboard.current.spaceKey.isPressed;
     }
 
     void CheckGround()
@@ -93,9 +118,7 @@ public class PlayerMovement : MonoBehaviour
 
     void Move()
     {
-        float x = Input.GetAxisRaw("Horizontal");
-
-        float targetSpeed = x * moveSpeed;
+        float targetSpeed = moveInput * moveSpeed;
 
         float accelRate;
 
@@ -136,7 +159,7 @@ public class PlayerMovement : MonoBehaviour
 
     void HandleJumpInput()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (jumpPressed)
         {
             jumpBufferCounter = jumpBufferTime;
         }
@@ -202,8 +225,7 @@ public class PlayerMovement : MonoBehaviour
                                  Time.fixedDeltaTime;
         }
 
-        if (rb.linearVelocity.y > 0 &&
-            !Input.GetKey(KeyCode.Space))
+        if (rb.linearVelocity.y > 0 && !jumpHeld)
         {
             rb.linearVelocity += Vector3.up *
                                  Physics.gravity.y *
