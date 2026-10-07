@@ -34,6 +34,7 @@ namespace MaxTech.UI
 
         void Update()
         {
+            if (RouletteMenu.IsOpen || RouletteMenu.LastClosedFrame == Time.frameCount) return;
             bool togglePressed =
                 (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) ||
                 (Gamepad.current != null && Gamepad.current.startButton.wasPressedThisFrame);
