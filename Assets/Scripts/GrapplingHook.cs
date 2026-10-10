@@ -1,8 +1,14 @@
+using System;  // at the top of the file
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+
+
 public class GrapplingHook : MonoBehaviour
 {
+    public event Action<Vector3> OnHookAttached;  // grapple point
+    public event Action<Vector3> OnHookMissed;    // where the player aimed
+    public event Action OnHookReleased;
     public Camera playerCamera;
     public Transform gunTip;
     public LineRenderer rope;
@@ -79,7 +85,7 @@ public class GrapplingHook : MonoBehaviour
             maxDistance))
         {
             if (hit.collider.CompareTag("NoGrapple"))
-                return;
+            { OnHookMissed?.Invoke(hit.point); return; }
 
             Vector3 dirToTarget =
                 (hit.point - transform.position).normalized;
@@ -96,15 +102,14 @@ public class GrapplingHook : MonoBehaviour
                 distToTarget))
             {
                 if (blocker.collider != hit.collider)
-                {
-                    return;
-                }
+                { OnHookMissed?.Invoke(blocker.point); return; }
             }
 
             grapplePoint = hit.point;
             grapplePoint.z = 0f;
 
             isGrappling = true;
+            OnHookAttached?.Invoke(grapplePoint);
 
             if (rope != null)
             {
@@ -112,6 +117,7 @@ public class GrapplingHook : MonoBehaviour
                 rope.positionCount = 2;
             }
         }
+        else { OnHookMissed?.Invoke(transform.position + direction * maxDistance); }
     }
 
     void StopGrapple()
@@ -125,6 +131,7 @@ public class GrapplingHook : MonoBehaviour
             rope.positionCount = 0;
             rope.enabled = false;
         }
+        OnHookReleased?.Invoke();
     }
 
     void DrawRope()
