@@ -187,10 +187,20 @@ public class RussianRouletteController : MonoBehaviour
         );
     }
 
+   
     private void HandleResult(bool isLive, int chamberIndex)
     {
+        // Prevent the same spin result from being processed twice.
         if (isResolving)
             return;
+
+        isResolving = true;
+        canSpin = false;
+
+        Debug.Log(
+            $"Roulette result: chamber {chamberIndex}, " +
+            (isLive ? "LIVE ROUND" : "BLANK")
+        );
 
         resultCoroutine = StartCoroutine(
             ResolveResult(isLive, chamberIndex)
@@ -199,21 +209,11 @@ public class RussianRouletteController : MonoBehaviour
 
     private IEnumerator ResolveResult(bool isLive, int chamberIndex)
     {
-        isResolving = true;
-        canSpin = false;
-
-        Debug.Log(
-            $"Roulette result: chamber {chamberIndex + 1}, " +
-            $"{(isLive ? "LIVE ROUND" : "BLANK")}"
-        );
-
         yield return new WaitForSeconds(resultDelay);
 
         if (isLive)
         {
-            // Connect this event to your health system in the Inspector.
             onLiveRound?.Invoke();
-
             Debug.Log("Live round! Health penalty triggered.");
         }
         else
@@ -221,7 +221,6 @@ public class RussianRouletteController : MonoBehaviour
             AddGrapplingCharge();
         }
 
-        // Close the selection UI after resolving the result.
         isOpen = false;
         isCharging = false;
         canSpin = false;
@@ -234,6 +233,8 @@ public class RussianRouletteController : MonoBehaviour
 
         SetRouletteVisible(false);
     }
+
+
 
     public void AddGrapplingCharge()
     {

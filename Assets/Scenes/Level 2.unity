@@ -12613,8 +12613,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6fb486faffc6ef64d836d07abb44c595, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RussianRouletteController
-  barrel: {fileID: 0}
-  loader: {fileID: 0}
+  barrel: {fileID: 5885468746782104427}
+  loader: {fileID: 7862957285950316879}
   bulletSelectUIObject: {fileID: 1923403999}
   startingCharges: 0
   maxCharges: 5
@@ -59562,6 +59562,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarrelSpin3D
   barrel: {fileID: 1699528242192736379}
+  viewCamera: {fileID: 1804619342}
   bullets:
   - {fileID: 5900311950411817796}
   - {fileID: 5534674763149134432}

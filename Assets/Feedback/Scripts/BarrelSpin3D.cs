@@ -16,6 +16,10 @@ public class BarrelSpin3D : MonoBehaviour
     [Header("Model")]
     [Tooltip("The object that rotates. Usually this same object (Cylinder_Root).")]
     [SerializeField] Transform barrel;
+    
+    [Header("Top Chamber Detection")]
+    [SerializeField] private Transform viewCamera;
+    
     [Tooltip("One bullet object per chamber, in order: top first, then clockwise.")]
     [SerializeField] GameObject[] bullets = new GameObject[6];
 
@@ -187,7 +191,11 @@ public class BarrelSpin3D : MonoBehaviour
 
         SetAngle(end);
         settling = false;
-        OnResult?.Invoke(isLive[target], target);
+
+        // Determine the result from the chamber physically at the top.
+        int topChamber = GetTopChamberIndex();
+
+        OnResult?.Invoke(isLive[topChamber], topChamber);
     }
 
     IEnumerator TweenAngle(float from, float to, float duration)
@@ -228,6 +236,59 @@ public class BarrelSpin3D : MonoBehaviour
 
     // --------------------------------------------------------------- testing
 
+    
+    int GetTopChamberIndex()
+    {
+        Camera cam = viewCamera != null
+            ? viewCamera.GetComponent<Camera>()
+            : Camera.main;
+
+        if (cam == null)
+        {
+            Debug.LogError("No gameplay Camera assigned.");
+            return 0;
+        }
+
+        int topIndex = -1;
+        float highestScreenY = float.NegativeInfinity;
+
+        for (int i = 0; i < ChamberCount; i++)
+        {
+            GameObject bullet = GetBullet(i);
+
+            if (bullet == null)
+            {
+                Debug.LogError($"Bullet reference {i} is missing.");
+                continue;
+            }
+
+            // Use the bullet's position even if its GameObject is inactive.
+            Vector3 screenPosition =
+                cam.WorldToViewportPoint(bullet.transform.position);
+
+            if (screenPosition.z <= 0f)
+                continue;
+
+            if (screenPosition.y > highestScreenY)
+            {
+                highestScreenY = screenPosition.y;
+                topIndex = i;
+            }
+        }
+
+        if (topIndex < 0)
+        {
+            Debug.LogError("Could not identify the top chamber.");
+            return 0;
+        }
+
+        Debug.Log($"Top chamber on screen: {topIndex}");
+        return topIndex;
+    }
+
+
+    
+    
     void HandleTestInput()
     {
 #if ENABLE_INPUT_SYSTEM
