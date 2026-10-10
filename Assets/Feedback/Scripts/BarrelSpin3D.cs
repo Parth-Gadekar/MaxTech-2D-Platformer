@@ -96,7 +96,7 @@ public class BarrelSpin3D : MonoBehaviour
         if (barrel == null) barrel = transform;
         baseRotation = barrel.localRotation;
         spinAxis = spinAxis.normalized;
-        LoadChambers();
+        LoadChambers(false);
         ApplyAngle(0f);
     }
 

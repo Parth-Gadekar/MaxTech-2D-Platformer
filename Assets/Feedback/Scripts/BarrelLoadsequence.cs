@@ -82,6 +82,15 @@ public class BarrelLoadSequence : MonoBehaviour
     {
         IsLoading = true;
 
+        // Hide all bullets before starting the loading animation.
+        for (int i = 0; i < 6; i++)
+        {
+            GameObject bullet = barrel.GetBullet(i);
+
+            if (bullet != null)
+                bullet.SetActive(false);
+        }
+
         // Pick which chambers are loaded this time, but keep every bullet hidden for now.
         barrel.LoadChambers(false);
 

@@ -71,11 +71,6 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 7862957285600761553}
   m_SourcePrefab: {fileID: 100100000, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
---- !u!1 &1866847324206736514 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 718052921220846732, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
-  m_PrefabInstance: {fileID: 1161742421641916430}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2080169631371939167 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
@@ -97,10 +92,10 @@ MonoBehaviour:
   bullets:
   - {fileID: 5900311949956551898}
   - {fileID: 5534674764036849150}
-  - {fileID: 1866847324206736514}
-  - {fileID: 7508800780567963613}
-  - {fileID: 4509897292360152630}
-  - {fileID: 3637842581488290519}
+  - {fileID: 5534674764036849150}
+  - {fileID: 5534674764036849150}
+  - {fileID: 5534674764036849150}
+  - {fileID: 5534674764036849150}
   spinAxis: {x: 0, y: 0, z: 1}
   flipDirection: 0
   minSpinSpeed: 120
@@ -109,7 +104,7 @@ MonoBehaviour:
   settleDuration: 1.2
   extraSpins: 2
   overshootDegrees: 6
-  liveChambers: 3
+  liveChambers: 2
   enableTestInput: 1
 --- !u!114 &7862957285600761553
 MonoBehaviour:
@@ -124,6 +119,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarrelLoadSequence
   barrel: {fileID: 0}
+  speedMultiplier: 1.66
   stepRotateTime: 0.15
   dropTime: 0.18
   pauseAfterDrop: 0.05
@@ -131,16 +127,6 @@ MonoBehaviour:
   startScale: 1.15
   overshoot: 1.7
   enableTestInput: 1
---- !u!1 &3637842581488290519 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: -6745442134770205991, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
-  m_PrefabInstance: {fileID: 1161742421641916430}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &4509897292360152630 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: -5870150594732718536, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
-  m_PrefabInstance: {fileID: 1161742421641916430}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &5534674764036849150 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6687928788133334512, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
@@ -149,10 +135,5 @@ GameObject:
 --- !u!1 &5900311949956551898 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -4468335098922474284, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
-  m_PrefabInstance: {fileID: 1161742421641916430}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &7508800780567963613 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 8659234701146986451, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
   m_PrefabInstance: {fileID: 1161742421641916430}
   m_PrefabAsset: {fileID: 0}
