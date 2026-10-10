@@ -1,0 +1,158 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &1161742421641916430
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 108.90038
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 10.27839
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071067
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -4468335098922474284, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+      propertyPath: m_Name
+      value: RouletteBarrel
+      objectReference: {fileID: 0}
+    - target: {fileID: 6687928788133334512, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5885468747676953845}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7862957285600761553}
+  m_SourcePrefab: {fileID: 100100000, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+--- !u!1 &1866847324206736514 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 718052921220846732, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+  m_PrefabInstance: {fileID: 1161742421641916430}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &2080169631371939167 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+  m_PrefabInstance: {fileID: 1161742421641916430}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5885468747676953845
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2080169631371939167}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43a1294361aa00946943fc7818fb253a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BarrelSpin3D
+  barrel: {fileID: 0}
+  bullets:
+  - {fileID: 5900311949956551898}
+  - {fileID: 5534674764036849150}
+  - {fileID: 1866847324206736514}
+  - {fileID: 7508800780567963613}
+  - {fileID: 4509897292360152630}
+  - {fileID: 3637842581488290519}
+  spinAxis: {x: 0, y: 0, z: 1}
+  flipDirection: 0
+  minSpinSpeed: 120
+  maxSpinSpeed: 1080
+  timeToFullCharge: 1.5
+  settleDuration: 1.2
+  extraSpins: 2
+  overshootDegrees: 6
+  liveChambers: 3
+  enableTestInput: 1
+--- !u!114 &7862957285600761553
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2080169631371939167}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee7f5180f16d5ca409283d1a3b50e94c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BarrelLoadSequence
+  barrel: {fileID: 0}
+  stepRotateTime: 0.15
+  dropTime: 0.18
+  pauseAfterDrop: 0.05
+  dropDistance: 0.02
+  startScale: 1.15
+  overshoot: 1.7
+  enableTestInput: 1
+--- !u!1 &3637842581488290519 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -6745442134770205991, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+  m_PrefabInstance: {fileID: 1161742421641916430}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &4509897292360152630 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -5870150594732718536, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+  m_PrefabInstance: {fileID: 1161742421641916430}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &5534674764036849150 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6687928788133334512, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+  m_PrefabInstance: {fileID: 1161742421641916430}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &5900311949956551898 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -4468335098922474284, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+  m_PrefabInstance: {fileID: 1161742421641916430}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &7508800780567963613 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8659234701146986451, guid: a235f504b41e3994a92b5de5992341c6, type: 3}
+  m_PrefabInstance: {fileID: 1161742421641916430}
+  m_PrefabAsset: {fileID: 0}
