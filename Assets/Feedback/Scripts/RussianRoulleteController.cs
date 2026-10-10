@@ -3,6 +3,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
+using MaxTech.UI;
 
 public class RussianRouletteController : MonoBehaviour
 {
@@ -26,6 +27,8 @@ public class RussianRouletteController : MonoBehaviour
     [SerializeField] private float resultDelay = 0.5f;
 
     [SerializeField] private GameObject rouletteVisuals;
+    [SerializeField] private BulletSelectUI bulletSelectUI;
+    private int bulletsLoadedThisRound;
 
     private int grapplingCharges;
 
@@ -207,6 +210,27 @@ public class RussianRouletteController : MonoBehaviour
         );
     }
 
+    public void AddGrapplingCharge(int amount)
+    {
+        int previousCharges = grapplingCharges;
+
+        grapplingCharges = Mathf.Clamp(
+            grapplingCharges + amount,
+            0,
+            maxCharges
+        );
+
+        PublishCharges();
+
+        if (grapplingCharges > previousCharges)
+        {
+            Debug.Log(
+                $"Gained grappling charges: " +
+                $"{grapplingCharges}/{maxCharges}"
+            );
+        }
+    }
+    
     private IEnumerator ResolveResult(bool isLive, int chamberIndex)
     {
         yield return new WaitForSeconds(resultDelay);
@@ -218,7 +242,12 @@ public class RussianRouletteController : MonoBehaviour
         }
         else
         {
-            AddGrapplingCharge();
+            // Blank chamber: reward charges based on bullets loaded.
+            int chargesToAward = bulletSelectUI != null
+                ? bulletSelectUI.LastLoadedBulletCount
+                : 0;
+
+            AddGrapplingCharge(chargesToAward);
         }
 
         isOpen = false;
@@ -282,6 +311,8 @@ public class RussianRouletteController : MonoBehaviour
 
     private void PublishCharges()
     {
+        HUDEvents.SetCharges(grapplingCharges, maxCharges);
+
         Debug.Log(
             $"Grappling charges: {grapplingCharges}/{maxCharges}"
         );

@@ -13,6 +13,9 @@ public class GrapplingHook : MonoBehaviour
     public Transform gunTip;
     public LineRenderer rope;
 
+    [Header("Roulette Charges")]
+    [SerializeField] private RussianRouletteController rouletteController;
+
     public float maxDistance = 40f;
     public float grappleSpeed = 25f;
     public float stopDistance = 1f;
@@ -26,8 +29,21 @@ public class GrapplingHook : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
 
+        if (rouletteController == null)
+        {
+            rouletteController =
+                FindAnyObjectByType<RussianRouletteController>();
+        }
+
         if (rope != null)
             rope.positionCount = 0;
+
+        if (rouletteController == null)
+        {
+            Debug.LogError(
+                "GrapplingHook: RussianRouletteController not found!"
+            );
+        }
     }
 
     void Update()
@@ -61,16 +77,22 @@ public class GrapplingHook : MonoBehaviour
         }
     }
 
+    
     void StartGrapple()
     {
+        if (rouletteController == null)
+            return;
+
+        if (rouletteController.GrapplingCharges <= 0)
+        {
+            Debug.Log("No grappling charges remaining!");
+            return;
+        }
+
         Vector3 mousePos = Mouse.current.position.ReadValue();
+        mousePos.z = Mathf.Abs(playerCamera.transform.position.z);
 
-        mousePos.z =
-            Mathf.Abs(playerCamera.transform.position.z);
-
-        Vector3 mouseWorld =
-            playerCamera.ScreenToWorldPoint(mousePos);
-
+        Vector3 mouseWorld = playerCamera.ScreenToWorldPoint(mousePos);
         mouseWorld.z = 0f;
 
         Vector3 direction =
@@ -85,7 +107,10 @@ public class GrapplingHook : MonoBehaviour
             maxDistance))
         {
             if (hit.collider.CompareTag("NoGrapple"))
-            { OnHookMissed?.Invoke(hit.point); return; }
+            {
+                OnHookMissed?.Invoke(hit.point);
+                return;
+            }
 
             Vector3 dirToTarget =
                 (hit.point - transform.position).normalized;
@@ -102,8 +127,15 @@ public class GrapplingHook : MonoBehaviour
                 distToTarget))
             {
                 if (blocker.collider != hit.collider)
-                { OnHookMissed?.Invoke(blocker.point); return; }
+                {
+                    OnHookMissed?.Invoke(blocker.point);
+                    return;
+                }
             }
+
+            // Consume a charge only after the target passes validation.
+            if (!rouletteController.TryConsumeGrapplingCharge())
+                return;
 
             grapplePoint = hit.point;
             grapplePoint.z = 0f;
@@ -117,8 +149,14 @@ public class GrapplingHook : MonoBehaviour
                 rope.positionCount = 2;
             }
         }
-        else { OnHookMissed?.Invoke(transform.position + direction * maxDistance); }
+        else
+        {
+            OnHookMissed?.Invoke(
+                transform.position + direction * maxDistance
+            );
+        }
     }
+
 
     void StopGrapple()
     {

@@ -66,6 +66,7 @@ public class BulletSelectUI : MonoBehaviour
     RectTransform spinRect;
     Text counterText;
     bool locked;
+    public int LastLoadedBulletCount { get; private set; }
     bool previewOk;
     Font font;
     Sprite rounded;
@@ -124,6 +125,7 @@ public class BulletSelectUI : MonoBehaviour
     {
         get { int n = 0; foreach (var s in slots) if (s.selected && s.root.activeSelf) n++; return n; }
     }
+    public int SelectedBulletCount => SelectedCount;
 
     void ToggleSlot(Slot s)
     {
@@ -137,6 +139,7 @@ public class BulletSelectUI : MonoBehaviour
     {
         if (locked) return;
         int count = SelectedCount;
+        LastLoadedBulletCount = count;
         if (count == 0) return;
         if (loader.IsLoading || barrel.IsBusy) return;
 
