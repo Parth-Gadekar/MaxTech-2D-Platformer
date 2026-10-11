@@ -239,40 +239,44 @@ public class BarrelSpin3D : MonoBehaviour
     
     int GetTopChamberIndex()
     {
-        Camera cam = viewCamera != null
-            ? viewCamera.GetComponent<Camera>()
-            : Camera.main;
+        // "Up" as the player sees it = up direction of the camera that renders the barrel
+        Transform reference = viewCamera != null
+            ? viewCamera
+            : (Camera.main != null ? Camera.main.transform : null);
 
-        if (cam == null)
+        if (reference == null)
         {
-            Debug.LogError("No gameplay Camera assigned.");
+            Debug.LogError("Assign View Camera (the camera that renders the revolver).");
             return 0;
         }
 
+        Vector3 up = reference.up;
+
         int topIndex = -1;
-        float highestScreenY = float.NegativeInfinity;
+        float best = float.NegativeInfinity;
+        float second = float.NegativeInfinity;
 
         for (int i = 0; i < ChamberCount; i++)
         {
             GameObject bullet = GetBullet(i);
-
             if (bullet == null)
             {
                 Debug.LogError($"Bullet reference {i} is missing.");
                 continue;
             }
 
-            // Use the bullet's position even if its GameObject is inactive.
-            Vector3 screenPosition =
-                cam.WorldToViewportPoint(bullet.transform.position);
+            // Works even when the bullet object is inactive
+            float height = Vector3.Dot(GetChamberPoint(bullet), up);
 
-            if (screenPosition.z <= 0f)
-                continue;
-
-            if (screenPosition.y > highestScreenY)
+            if (height > best)
             {
-                highestScreenY = screenPosition.y;
+                second = best;
+                best = height;
                 topIndex = i;
+            }
+            else if (height > second)
+            {
+                second = height;
             }
         }
 
@@ -282,11 +286,24 @@ public class BarrelSpin3D : MonoBehaviour
             return 0;
         }
 
-        Debug.Log($"Top chamber on screen: {topIndex}");
+        // If the winner barely beats the runner-up, the barrel stopped between two chambers
+        if (best - second < 0.001f)
+            Debug.LogWarning("Barrel is not aligned: two chambers are equally high.");
+
+        Debug.Log($"Top chamber: {topIndex}");
         return topIndex;
     }
 
+    // Where the chamber visually is: the bullet MESH center, not the object pivot.
+    // Works even when the bullet object is inactive.
+    Vector3 GetChamberPoint(GameObject bullet)
+    {
+        MeshFilter mf = bullet.GetComponentInChildren<MeshFilter>(true);
+        if (mf != null && mf.sharedMesh != null)
+            return mf.transform.TransformPoint(mf.sharedMesh.bounds.center);
 
+        return bullet.transform.position;
+    }
     
     
     void HandleTestInput()
@@ -317,5 +334,19 @@ public class BarrelSpin3D : MonoBehaviour
     void LogResult(bool live, int chamber)
     {
         Debug.Log(live ? $"HIT! chamber {chamber}" : $"Misfire... chamber {chamber}");
+    }
+
+    void OnDrawGizmos()
+    {
+        if (bullets == null || bullets.Length < 2 || bullets[0] == null || bullets[1] == null) return;
+
+        float r = Vector3.Distance(GetChamberPoint(bullets[0]), GetChamberPoint(bullets[1])) * 0.15f;
+
+        for (int i = 0; i < bullets.Length && i < ChamberCount; i++)
+        {
+            if (bullets[i] == null) continue;
+            Gizmos.color = isLive[i] ? Color.green : Color.red;
+            Gizmos.DrawSphere(GetChamberPoint(bullets[i]), r);
+        }
     }
 }
