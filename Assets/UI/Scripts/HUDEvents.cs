@@ -11,11 +11,7 @@ namespace MaxTech.UI
     {
         public static event Action<int, int> LivesChanged;
         public static event Action<int, int> ChargesChanged;
-
-        // Roulette (raised by RouletteMenu)
-        public static event Action<bool> RouletteOpenChanged;    // true = opened (game frozen), false = closed
-        public static event Action<int> RouletteSpinStarted;     // bullets loaded; Visual Feedback spins the model
-        public static event Action<int, bool> RouletteResolved;  // bullets, hit; Core applies the rules
+        public static event Action<bool> RouletteFired; // true = live round, false = blank
 
         // Last values sent, so UI that loads late still shows the right state.
         public static int Lives { get; private set; } = -1;
@@ -23,9 +19,6 @@ namespace MaxTech.UI
         public static int Charges { get; private set; } = -1;
         public static int MaxCharges { get; private set; } = -1;
 
-        // Gameplay scripts (movement, grapple) should ignore input while this is true.
-        public static bool GameplayInputBlocked => PauseMenu.IsPaused || RouletteMenu.IsOpen;
-    
         public static void SetLives(int current, int max)
         {
             MaxLives = Mathf.Max(0, max);
@@ -40,10 +33,7 @@ namespace MaxTech.UI
             ChargesChanged?.Invoke(Charges, MaxCharges);
         }
 
-        public static void RaiseRouletteOpenChanged(bool open) => RouletteOpenChanged?.Invoke(open);
-        public static void RaiseRouletteSpinStarted(int bullets) => RouletteSpinStarted?.Invoke(bullets);
-        public static void RaiseRouletteResolved(int bullets, bool hit) => RouletteResolved?.Invoke(bullets, hit);
-
+        public static void ReportRoulette(bool wasLive) => RouletteFired?.Invoke(wasLive);
 
         // Clears old values between play sessions.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -51,9 +41,7 @@ namespace MaxTech.UI
         {
             LivesChanged = null;
             ChargesChanged = null;
-            RouletteOpenChanged = null;
-            RouletteSpinStarted = null;
-            RouletteResolved = null;
+            RouletteFired = null;
             Lives = MaxLives = Charges = MaxCharges = -1;
         }
     }
