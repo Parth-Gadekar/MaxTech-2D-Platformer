@@ -117,3 +117,4 @@ MonoBehaviour:
       m_Calls: []
   resultDelay: 0.5
   rouletteVisuals: {fileID: 0}
+  bulletSelectUI: {fileID: 639778471130111900}
