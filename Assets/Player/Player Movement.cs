@@ -44,6 +44,7 @@ public class PlayerMovement : MonoBehaviour
     private bool isWallSliding;
 
     private Rigidbody rb;
+    private GrapplingHook grapplingHook;
 
     private bool isGrounded;
     private bool wasGrounded;
@@ -63,12 +64,21 @@ public class PlayerMovement : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        grapplingHook = GetComponent<GrapplingHook>();
         jumpsRemaining = maxJumps;
     }
 
     void Update()
     {
         ReadInput();
+
+        // Don't let jumping and wall-jump logic fight the grapple.
+        if (grapplingHook != null && grapplingHook.IsGrappling)
+        {
+            jumpPressed = false;
+            jumpBufferCounter = 0f;
+            return;
+        }
 
         CheckGround();
         CheckWall();
@@ -78,6 +88,10 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
+        // The grapple controls the Rigidbody while pulling.
+        if (grapplingHook != null && grapplingHook.IsGrappling)
+            return;
+
         Move();
         BetterJump();
     }
