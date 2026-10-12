@@ -16,6 +16,10 @@ public class BarrelSpin3D : MonoBehaviour
     [Header("Model")]
     [Tooltip("The object that rotates. Usually this same object (Cylinder_Root).")]
     [SerializeField] Transform barrel;
+    
+    [Header("Top Chamber Detection")]
+    [SerializeField] private Transform viewCamera;
+    
     [Tooltip("One bullet object per chamber, in order: top first, then clockwise.")]
     [SerializeField] GameObject[] bullets = new GameObject[6];
 
@@ -96,7 +100,7 @@ public class BarrelSpin3D : MonoBehaviour
         if (barrel == null) barrel = transform;
         baseRotation = barrel.localRotation;
         spinAxis = spinAxis.normalized;
-        LoadChambers();
+        LoadChambers(false);
         ApplyAngle(0f);
     }
 
@@ -187,7 +191,11 @@ public class BarrelSpin3D : MonoBehaviour
 
         SetAngle(end);
         settling = false;
-        OnResult?.Invoke(isLive[target], target);
+
+        // Determine the result from the chamber physically at the top.
+        int topChamber = GetTopChamberIndex();
+
+        OnResult?.Invoke(isLive[topChamber], topChamber);
     }
 
     IEnumerator TweenAngle(float from, float to, float duration)
@@ -228,6 +236,76 @@ public class BarrelSpin3D : MonoBehaviour
 
     // --------------------------------------------------------------- testing
 
+    
+    int GetTopChamberIndex()
+    {
+        // "Up" as the player sees it = up direction of the camera that renders the barrel
+        Transform reference = viewCamera != null
+            ? viewCamera
+            : (Camera.main != null ? Camera.main.transform : null);
+
+        if (reference == null)
+        {
+            Debug.LogError("Assign View Camera (the camera that renders the revolver).");
+            return 0;
+        }
+
+        Vector3 up = reference.up;
+
+        int topIndex = -1;
+        float best = float.NegativeInfinity;
+        float second = float.NegativeInfinity;
+
+        for (int i = 0; i < ChamberCount; i++)
+        {
+            GameObject bullet = GetBullet(i);
+            if (bullet == null)
+            {
+                Debug.LogError($"Bullet reference {i} is missing.");
+                continue;
+            }
+
+            // Works even when the bullet object is inactive
+            float height = Vector3.Dot(GetChamberPoint(bullet), up);
+
+            if (height > best)
+            {
+                second = best;
+                best = height;
+                topIndex = i;
+            }
+            else if (height > second)
+            {
+                second = height;
+            }
+        }
+
+        if (topIndex < 0)
+        {
+            Debug.LogError("Could not identify the top chamber.");
+            return 0;
+        }
+
+        // If the winner barely beats the runner-up, the barrel stopped between two chambers
+        if (best - second < 0.001f)
+            Debug.LogWarning("Barrel is not aligned: two chambers are equally high.");
+
+        Debug.Log($"Top chamber: {topIndex}");
+        return topIndex;
+    }
+
+    // Where the chamber visually is: the bullet MESH center, not the object pivot.
+    // Works even when the bullet object is inactive.
+    Vector3 GetChamberPoint(GameObject bullet)
+    {
+        MeshFilter mf = bullet.GetComponentInChildren<MeshFilter>(true);
+        if (mf != null && mf.sharedMesh != null)
+            return mf.transform.TransformPoint(mf.sharedMesh.bounds.center);
+
+        return bullet.transform.position;
+    }
+    
+    
     void HandleTestInput()
     {
 #if ENABLE_INPUT_SYSTEM
@@ -256,5 +334,19 @@ public class BarrelSpin3D : MonoBehaviour
     void LogResult(bool live, int chamber)
     {
         Debug.Log(live ? $"HIT! chamber {chamber}" : $"Misfire... chamber {chamber}");
+    }
+
+    void OnDrawGizmos()
+    {
+        if (bullets == null || bullets.Length < 2 || bullets[0] == null || bullets[1] == null) return;
+
+        float r = Vector3.Distance(GetChamberPoint(bullets[0]), GetChamberPoint(bullets[1])) * 0.15f;
+
+        for (int i = 0; i < bullets.Length && i < ChamberCount; i++)
+        {
+            if (bullets[i] == null) continue;
+            Gizmos.color = isLive[i] ? Color.green : Color.red;
+            Gizmos.DrawSphere(GetChamberPoint(bullets[i]), r);
+        }
     }
 }
