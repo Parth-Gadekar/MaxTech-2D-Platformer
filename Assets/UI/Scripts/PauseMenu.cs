@@ -34,6 +34,8 @@ namespace MaxTech.UI
 
         void Update()
         {
+            if (GameOverScreen.IsShown) return; // no pausing on top of Game Over
+
             bool togglePressed =
                 (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) ||
                 (Gamepad.current != null && Gamepad.current.startButton.wasPressedThisFrame);
