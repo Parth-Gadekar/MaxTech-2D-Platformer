@@ -35,6 +35,7 @@ namespace MaxTech.UI
         void Update()
         {
             if (GameOverScreen.IsShown || LevelCompleteScreen.IsShown) return; // no pausing on top of end screens
+            if (SettingsMenu.IsOpen || SettingsMenu.LastClosedFrame == Time.frameCount) return; // Esc closes Settings first
 
             bool togglePressed =
                 (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) ||
