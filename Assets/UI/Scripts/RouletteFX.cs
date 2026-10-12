@@ -43,6 +43,10 @@ namespace MaxTech.UI
         [SerializeField] int hitLifeLoss = 1;
         [SerializeField] int hitChargeLoss = 1;
 
+        [Header("Tray")]
+        [Tooltip("New text for the tray's button. It loads the bullets (the spin itself is hold SPACE), so 'SPIN' was misleading.")]
+        [SerializeField] string trayButtonLabel = "LOAD";
+
         [Header("Timer")]
         [Tooltip("Off = the level timer keeps running during the roulette (it costs time). On = the timer stops while it is open.")]
         [SerializeField] bool pauseTimerDuringRoulette = false;
@@ -96,6 +100,7 @@ namespace MaxTech.UI
             barrel = FindAnyObjectByType<BarrelSpin3D>();
             loader = FindAnyObjectByType<BarrelLoadSequence>();
             tray = FindAnyObjectByType<BulletSelectUI>();
+            RelabelTrayButton();
             lives = FindAnyObjectByType<PlayerLives>();
             timer = FindAnyObjectByType<LevelTimer>();
             movement = FindAnyObjectByType<PlayerMovement>();
@@ -176,6 +181,22 @@ namespace MaxTech.UI
             }
         }
 
+        // abivv's BulletSelectUI builds its button in code with the label "SPIN". Rename it without touching his script.
+        void RelabelTrayButton()
+        {
+            if (tray == null || string.IsNullOrEmpty(trayButtonLabel)) return;
+
+            foreach (Text label in tray.GetComponentsInChildren<Text>(true))
+            {
+                if (label.transform.parent != null && label.transform.parent.name == "SpinButton")
+                {
+                    label.text = trayButtonLabel;
+                    return;
+                }
+            }
+            Debug.LogWarning("RouletteFX: tray button label not found, it keeps its original text.", this);
+        }
+
         // ---------- Info panel ----------
 
         void HandleLoadComplete() => loaded = true;
@@ -216,7 +237,7 @@ namespace MaxTech.UI
                     spinning ? (spaceHeld ? "Release SPACE to fire!" : "Spinning...") :
                     loaded ? "Hold SPACE to spin, release to fire" :
                     loading ? "Loading the cylinder..." :
-                    bullets > 0 ? "Press SPIN to load the cylinder" :
+                    bullets > 0 ? $"Press {trayButtonLabel} to load the cylinder" :
                     "Click bullets in the tray (max 5)   ·   R to close";
             }
         }
