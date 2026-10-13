@@ -46,7 +46,7 @@ public class PlayerMovement : MonoBehaviour
     private Rigidbody rb;
     private GrapplingHook grapplingHook;
 
-    public bool isGrounded;
+    private bool isGrounded;
     private bool wasGrounded;
     private bool isTouchingWall;
     private bool isWallLeft;
