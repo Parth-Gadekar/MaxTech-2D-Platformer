@@ -46,6 +46,21 @@ public class PlayerMovement : MonoBehaviour
     private Rigidbody rb;
     private GrapplingHook grapplingHook;
 
+
+    [Header("Player Audio")]
+    public AudioClip jumpGrunt;
+    public AudioClip normalRunning;
+    public AudioClip metalRunning;
+
+    [Range(0.05f, 1f)]
+    public float footstepInterval = 0.35f;
+
+    private AudioSource jumpAudioSource;
+    private AudioSource runningAudioSource;
+    private float footstepTimer;
+    private AudioClip currentRunningClip;
+
+
     public bool isGrounded;
     private bool wasGrounded;
     private bool isTouchingWall;
@@ -61,12 +76,26 @@ public class PlayerMovement : MonoBehaviour
     private bool jumpPressed;
     private bool jumpHeld;
 
+
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         grapplingHook = GetComponent<GrapplingHook>();
         jumpsRemaining = maxJumps;
+
+        // Separate sources allow jumping and running sounds
+        // to work independently.
+        jumpAudioSource = gameObject.AddComponent<AudioSource>();
+        jumpAudioSource.playOnAwake = false;
+        jumpAudioSource.spatialBlend = 0f;
+
+        runningAudioSource = gameObject.AddComponent<AudioSource>();
+        runningAudioSource.playOnAwake = false;
+        runningAudioSource.spatialBlend = 0f;
+        runningAudioSource.loop = true;
+        runningAudioSource.volume = 0.5f;
     }
+
 
     void Update()
     {
@@ -81,6 +110,7 @@ public class PlayerMovement : MonoBehaviour
         }
 
         CheckGround();
+        UpdateFootsteps();
         CheckWall();
         WallJump();
         HandleJumpInput();
@@ -225,8 +255,15 @@ public class PlayerMovement : MonoBehaviour
             return;
     }
 
+
     void PerformJump()
     {
+        // Play the jump sound.
+        if (jumpGrunt != null)
+        {
+            jumpAudioSource.PlayOneShot(jumpGrunt);
+        }
+
         float force = jumpForce;
 
         if (rb.linearVelocity.y < 0)
@@ -239,6 +276,7 @@ public class PlayerMovement : MonoBehaviour
             ForceMode.Impulse
         );
     }
+
 
     void BetterJump()
     {
@@ -344,6 +382,10 @@ public class PlayerMovement : MonoBehaviour
                 ),
                 ForceMode.Impulse
             );
+            if (jumpGrunt != null)
+            {
+                jumpAudioSource.PlayOneShot(jumpGrunt);
+            }
 
             wallJumpCounter = 0;
         }
@@ -357,6 +399,62 @@ public class PlayerMovement : MonoBehaviour
             {
                 isWallJumping = false;
             }
+        }
+    }
+
+
+    void UpdateFootsteps()
+    {
+        bool moving = Mathf.Abs(moveInput) > 0.1f;
+
+        // Don't run sounds while airborne or stationary.
+        if (!isGrounded || !moving ||
+            (grapplingHook != null && grapplingHook.IsGrappling))
+        {
+            runningAudioSource.Stop();
+            currentRunningClip = null;
+            return;
+        }
+
+        AudioClip desiredClip = normalRunning;
+
+        // Detect the surface immediately beneath the player.
+        if (Physics.Raycast(
+            groundCheck.position,
+            Vector3.down,
+            out RaycastHit hit,
+            groundCheckDistance + 0.2f))
+        {
+            string materialName = "";
+
+            if (hit.collider.sharedMaterial != null)
+            {
+                materialName =
+                    hit.collider.sharedMaterial.name.ToLower();
+            }
+
+            // Use a physics material named something like Metal.
+            if (materialName.Contains("metal"))
+            {
+                desiredClip = metalRunning;
+            }
+        }
+
+        if (desiredClip == null)
+        {
+            runningAudioSource.Stop();
+            currentRunningClip = null;
+            return;
+        }
+
+        // Only restart audio when the surface changes.
+        if (currentRunningClip != desiredClip ||
+            !runningAudioSource.isPlaying)
+        {
+            runningAudioSource.clip = desiredClip;
+            runningAudioSource.loop = true;
+            runningAudioSource.Play();
+            currentRunningClip = desiredClip;
         }
     }
 
