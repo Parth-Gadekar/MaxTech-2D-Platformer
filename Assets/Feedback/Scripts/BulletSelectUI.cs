@@ -125,6 +125,7 @@ public class BulletSelectUI : MonoBehaviour
     {
         get { int n = 0; foreach (var s in slots) if (s.selected && s.root.activeSelf) n++; return n; }
     }
+    
     public int SelectedBulletCount => SelectedCount;
 
     void ToggleSlot(Slot s)
@@ -142,6 +143,7 @@ public class BulletSelectUI : MonoBehaviour
         LastLoadedBulletCount = count;
         if (count == 0) return;
         if (loader.IsLoading || barrel.IsBusy) return;
+        LastLoadedBulletCount = count;
 
         locked = true;
 
