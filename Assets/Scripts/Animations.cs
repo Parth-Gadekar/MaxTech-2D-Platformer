@@ -1,34 +1,57 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using System.Collections;
+using System.Reflection;
 
 public class CharacterAnimationTest : MonoBehaviour
 {
     private Animator animator;
-    public PlayerMovement movementScript;
     [SerializeField] private Camera mainCamera;
     [SerializeField] private float aimThreshold = 0.5f;
 
     private bool jump;
     private bool land;
-    private bool wasGrounded;
     private bool isRoulette;
     private bool Aim;
+    private bool isGrounded;
+    private bool wasGrounded;
+    private bool hasBeenAirborne;
+    private float airborneTimer;
+    private bool rouletteActionStarted;
+
+    [SerializeField] private float minimumAirborneTime = 0.2f;
+
+    private PlayerMovement playerMovement;
+    private FieldInfo groundedField;
 
     void Start()
     {
-        movementScript = GetComponentInParent<PlayerMovement>();
-        wasGrounded = movementScript.isGrounded;
     }
 
     void Awake()
     {
         animator = GetComponent<Animator>();
+        playerMovement = GetComponentInParent<PlayerMovement>();
+
+        if (playerMovement == null)
+        {
+            Debug.LogError("PlayerMovement not found on parent objects!");
+            return;
+        }
+
+        groundedField = typeof(PlayerMovement).GetField(
+            "isGrounded",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
+
+        if (groundedField == null)
+        {
+            Debug.LogError("Could not find isGrounded!");
+        }
     }
 
     void Update()
     {
-        
         if (Keyboard.current != null)
         {
             if (Keyboard.current.aKey.isPressed)
@@ -39,39 +62,64 @@ public class CharacterAnimationTest : MonoBehaviour
             {
                 transform.rotation = Quaternion.Euler(0, 270, 0);
             }
-
-            // Jump animation
-            if (Keyboard.current.spaceKey.wasPressedThisFrame)
-            {
-                    animator.SetTrigger("Jump");
-            }
         }
 
-        if (Keyboard.current.rKey.wasPressedThisFrame)
+        if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
         {
-            if(isRoulette)
+            if (!isRoulette)
             {
-                CloseRoulette();
+                OpenRoulette();
+                rouletteActionStarted = false;
             }
             else
             {
-                OpenRoulette();
+                CloseRoulette();
             }
         }
-        if (Keyboard.current != null &&
-        Keyboard.current.spaceKey.wasPressedThisFrame &&
-        isRoulette && isRoulette)
-    {
-        OnRouletteFinished();
-    }
 
+        if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
+        {
+            if (isRoulette && !rouletteActionStarted)
+            {
+                rouletteActionStarted = true;
+            }
+            else if (isRoulette && rouletteActionStarted)
+            {
+                OnRouletteFinished();
+            }
+            else
+            {
+                animator.ResetTrigger("Jump");
+                animator.SetTrigger("Jump");
+            }
+        }
 
-    if (movementScript.isGrounded && !wasGrounded)
-    {
-        animator.SetTrigger("Land");
-    }
+        if (groundedField != null && playerMovement != null)
+        {
+            isGrounded = (bool)groundedField.GetValue(playerMovement);
 
-    wasGrounded = movementScript.isGrounded;
+            if (!isGrounded)
+            {
+                hasBeenAirborne = true;
+                airborneTimer += Time.deltaTime;
+            }
+            else
+            {
+                if (hasBeenAirborne &&
+                    airborneTimer >= minimumAirborneTime)
+                {
+                    animator.ResetTrigger("Land");
+                    animator.SetTrigger("Land");
+
+                    Debug.Log("LAND TRIGGER FIRED");
+                }
+
+                hasBeenAirborne = false;
+                airborneTimer = 0f;
+            }
+
+            wasGrounded = isGrounded;
+        }
 
         if (animator == null || Keyboard.current == null)
             return;
@@ -83,19 +131,15 @@ public class CharacterAnimationTest : MonoBehaviour
         animator.SetBool("isWalking", isWalking);
 
         if (Mouse.current != null &&
-        Mouse.current.rightButton.wasPressedThisFrame)
+            Mouse.current.rightButton.wasPressedThisFrame)
         {
             Debug.Log("Reached mouse check");
 
-            if (Mouse.current != null &&
-                Mouse.current.rightButton.wasPressedThisFrame)
-            {
-                Aim=!Aim;
-                animator.SetBool("Aim",Aim);
-            }
+            Aim = !Aim;
+            animator.SetBool("Aim", Aim);
         }
     }
-   
+
     public void OpenRoulette()
     {
         isRoulette = true;
@@ -105,10 +149,11 @@ public class CharacterAnimationTest : MonoBehaviour
     public void CloseRoulette()
     {
         isRoulette = false;
+        rouletteActionStarted = false;
         animator.SetBool("isRoulette", false);
     }
 
-   public void OnRouletteFinished()
+    public void OnRouletteFinished()
     {
         CloseRoulette();
     }
