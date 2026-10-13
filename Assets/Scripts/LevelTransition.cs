@@ -11,6 +11,10 @@ public class LevelTransition : MonoBehaviour
         if (!other.CompareTag("Player"))
             return;
 
+        // Show the Level Complete screen first; its Continue button loads the next level.
+        if (MaxTech.UI.LevelCompleteScreen.TryShow(nextSceneName, spawnPointName))
+            return;
+
         if (LevelSpawnManager.Instance != null)
         {
             LevelSpawnManager.Instance.LoadLevel(
