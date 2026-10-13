@@ -1,6 +1,8 @@
+
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+[RequireComponent(typeof(Rigidbody))]
 public class PlayerMovement : MonoBehaviour
 {
     [Header("Movement")]
@@ -11,6 +13,7 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Jump")]
     public float jumpForce = 12f;
+    [Min(1)]
     public int maxJumps = 2;
 
     [Header("Ground Check")]
@@ -28,6 +31,9 @@ public class PlayerMovement : MonoBehaviour
     public float apexThreshold = 1f;
     public float apexGravityMultiplier = 0.5f;
 
+    [Header("Wall Detection")]
+    public float wallCheckDistance = 1.2f;
+
     [Header("Wall Slide")]
     public float wallSlideSpeed = -3f;
 
@@ -37,25 +43,38 @@ public class PlayerMovement : MonoBehaviour
     public float wallJumpBuffer = 0.2f;
     public float wallJumpLockTime = 0.15f;
 
-    private float wallJumpCounter;
-    private float wallJumpLockCounter;
+    [Header("Player Audio")]
+    public AudioClip jumpGrunt;
+    public AudioClip normalRunning;
+    public AudioClip metalRunning;
 
-    private bool isWallJumping;
-    private bool isWallSliding;
+    [Range(0.05f, 1f)]
+    public float footstepInterval = 0.35f;
+
+    private AudioSource jumpAudioSource;
+    private AudioSource runningAudioSource;
+    private float footstepTimer;
+    private AudioClip currentRunningClip;
 
     private Rigidbody rb;
     private GrapplingHook grapplingHook;
 
-    private bool isGrounded;
+    public bool isGrounded { get; private set; }
+
     private bool wasGrounded;
-    private bool isTouchingWall;
     private bool isWallLeft;
     private bool isWallRight;
+    private bool isTouchingWall;
+    private bool isWallSliding;
+    private bool isWallJumping;
 
+    // Normal jumps remaining. Wall jumps never change this value.
     private int jumpsRemaining;
 
     private float coyoteCounter;
     private float jumpBufferCounter;
+    private float wallJumpCounter;
+    private float wallJumpLockCounter;
 
     private float moveInput;
     private bool jumpPressed;
@@ -65,14 +84,28 @@ public class PlayerMovement : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         grapplingHook = GetComponent<GrapplingHook>();
+
+        maxJumps = Mathf.Max(1, maxJumps);
         jumpsRemaining = maxJumps;
+
+        // Separate sources allow jumping and running sounds
+        // to play independently.
+        jumpAudioSource = gameObject.AddComponent<AudioSource>();
+        jumpAudioSource.playOnAwake = false;
+        jumpAudioSource.spatialBlend = 0f;
+
+        runningAudioSource = gameObject.AddComponent<AudioSource>();
+        runningAudioSource.playOnAwake = false;
+        runningAudioSource.spatialBlend = 0f;
+        runningAudioSource.loop = true;
+        runningAudioSource.volume = 0.5f;
     }
 
     void Update()
     {
         ReadInput();
 
-        // Don't let jumping and wall-jump logic fight the grapple.
+        // Let the grappling hook control the player while pulling.
         if (grapplingHook != null && grapplingHook.IsGrappling)
         {
             jumpPressed = false;
@@ -81,6 +114,7 @@ public class PlayerMovement : MonoBehaviour
         }
 
         CheckGround();
+        UpdateFootsteps();
         CheckWall();
         WallJump();
         HandleJumpInput();
@@ -88,7 +122,6 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
-        // The grapple controls the Rigidbody while pulling.
         if (grapplingHook != null && grapplingHook.IsGrappling)
             return;
 
@@ -116,10 +149,18 @@ public class PlayerMovement : MonoBehaviour
 
     void CheckGround()
     {
+        if (groundCheck == null)
+        {
+            isGrounded = false;
+            return;
+        }
+
         isGrounded = Physics.Raycast(
             groundCheck.position,
             Vector3.down,
-            groundCheckDistance
+            groundCheckDistance,
+            Physics.DefaultRaycastLayers,
+            QueryTriggerInteraction.Ignore
         );
 
         Debug.DrawRay(
@@ -132,14 +173,20 @@ public class PlayerMovement : MonoBehaviour
         {
             coyoteCounter = coyoteTime;
 
-            if (!wasGrounded)
+            // Reset jumps only when landing after being airborne.
+            // Do not reset every frame while standing on the floor.
+            if (!wasGrounded && rb.linearVelocity.y <= 0.1f)
             {
                 jumpsRemaining = maxJumps;
+                isWallJumping = false;
             }
         }
         else
         {
-            coyoteCounter -= Time.deltaTime;
+            coyoteCounter = Mathf.Max(
+                0f,
+                coyoteCounter - Time.deltaTime
+            );
         }
 
         wasGrounded = isGrounded;
@@ -147,12 +194,12 @@ public class PlayerMovement : MonoBehaviour
 
     void Move()
     {
-        float targetSpeed = moveInput * moveSpeed;
-
-        float accelRate;
-
+        // Preserve the initial push away from the wall.
         if (isWallJumping)
             return;
+
+        float targetSpeed = moveInput * moveSpeed;
+        float accelRate;
 
         if (isGrounded)
         {
@@ -167,26 +214,26 @@ public class PlayerMovement : MonoBehaviour
                 : deceleration * airControl;
         }
 
-        float speedDifference =
-            targetSpeed - rb.linearVelocity.x;
-
-        float movement =
-            speedDifference * accelRate;
+        float speedDifference = targetSpeed - rb.linearVelocity.x;
+        float movement = speedDifference * accelRate;
 
         rb.AddForce(
-            movement * Vector3.right,
+            Vector3.right * movement,
             ForceMode.Force
         );
 
-        Vector3 vel = rb.linearVelocity;
+        Vector3 velocity = rb.linearVelocity;
 
-        vel.x = Mathf.Clamp(
-            vel.x,
+        velocity.x = Mathf.Clamp(
+            velocity.x,
             -moveSpeed,
             moveSpeed
         );
 
-        rb.linearVelocity = vel;
+        // Preserve the 2.5D movement plane.
+        velocity.z = 0f;
+
+        rb.linearVelocity = velocity;
     }
 
     void HandleJumpInput()
@@ -197,39 +244,49 @@ public class PlayerMovement : MonoBehaviour
         }
         else
         {
-            jumpBufferCounter -= Time.deltaTime;
+            jumpBufferCounter = Mathf.Max(
+                0f,
+                jumpBufferCounter - Time.deltaTime
+            );
         }
 
-        if (jumpBufferCounter > 0)
-        {
-            if (isGrounded || coyoteCounter > 0)
-            {
-                PerformJump();
-
-                jumpsRemaining = maxJumps - 1;
-
-                jumpBufferCounter = 0;
-                coyoteCounter = 0;
-            }
-            else if (jumpsRemaining > 0)
-            {
-                PerformJump();
-
-                jumpsRemaining--;
-
-                jumpBufferCounter = 0;
-            }
-        }
-
-        if (isWallJumping)
+        if (jumpBufferCounter <= 0f)
             return;
+
+        // First normal jump: ground jump or coyote-time jump.
+        // This branch is available only before any normal jump
+        // has been consumed during the current airtime.
+        if (jumpsRemaining == maxJumps &&
+            (isGrounded || coyoteCounter > 0f))
+        {
+            PerformJump();
+
+            jumpsRemaining = maxJumps - 1;
+            jumpBufferCounter = 0f;
+            coyoteCounter = 0f;
+            return;
+        }
+
+        // Additional normal jumps, such as the double jump.
+        if (jumpsRemaining > 0)
+        {
+            PerformJump();
+
+            jumpsRemaining--;
+            jumpBufferCounter = 0f;
+        }
     }
 
     void PerformJump()
     {
+        if (jumpGrunt != null && jumpAudioSource != null)
+        {
+            jumpAudioSource.PlayOneShot(jumpGrunt);
+        }
+
         float force = jumpForce;
 
-        if (rb.linearVelocity.y < 0)
+        if (rb.linearVelocity.y < 0f)
         {
             force -= rb.linearVelocity.y;
         }
@@ -242,122 +299,210 @@ public class PlayerMovement : MonoBehaviour
 
     void BetterJump()
     {
-        if (Mathf.Abs(rb.linearVelocity.y) < apexThreshold)
+        Vector3 velocity = rb.linearVelocity;
+
+        if (velocity.y > 0f &&
+            Mathf.Abs(velocity.y) < apexThreshold)
         {
             rb.AddForce(
                 Vector3.up *
                 Physics.gravity.y *
-                (apexGravityMultiplier - 1),
+                (apexGravityMultiplier - 1f),
                 ForceMode.Acceleration
             );
         }
 
-        if (rb.linearVelocity.y < 0)
+        velocity = rb.linearVelocity;
+
+        if (velocity.y < 0f)
         {
-            rb.linearVelocity += Vector3.up *
-                                 Physics.gravity.y *
-                                 (fallMultiplier - 1) *
-                                 Time.fixedDeltaTime;
+            velocity.y += Physics.gravity.y *
+                           (fallMultiplier - 1f) *
+                           Time.fixedDeltaTime;
         }
 
-        if (rb.linearVelocity.y > 0 && !jumpHeld)
+        if (velocity.y > 0f && !jumpHeld)
         {
-            rb.linearVelocity += Vector3.up *
-                                 Physics.gravity.y *
-                                 (lowJumpMultiplier - 1) *
-                                 Time.fixedDeltaTime;
+            velocity.y += Physics.gravity.y *
+                          (lowJumpMultiplier - 1f) *
+                          Time.fixedDeltaTime;
         }
 
-        if (rb.linearVelocity.y < maxFallSpeed)
-        {
-            rb.linearVelocity = new Vector3(
-                rb.linearVelocity.x,
-                maxFallSpeed,
-                0f
-            );
-        }
+        velocity.y = Mathf.Max(velocity.y, maxFallSpeed);
+        velocity.z = 0f;
+
+        rb.linearVelocity = velocity;
     }
 
     void CheckWall()
     {
         isWallRight = Physics.Raycast(
             transform.position,
-            transform.right,
-            1.2f
+            Vector3.right,
+            wallCheckDistance,
+            Physics.DefaultRaycastLayers,
+            QueryTriggerInteraction.Ignore
         );
 
         isWallLeft = Physics.Raycast(
             transform.position,
-            -transform.right,
-            1.2f
+            Vector3.left,
+            wallCheckDistance,
+            Physics.DefaultRaycastLayers,
+            QueryTriggerInteraction.Ignore
         );
 
         bool pressingIntoWall =
-            (isWallRight && moveInput > 0) ||
-            (isWallLeft && moveInput < 0);
+            (isWallRight && moveInput > 0f) ||
+            (isWallLeft && moveInput < 0f);
 
-        isTouchingWall =
-            isWallLeft || isWallRight;
+        isTouchingWall = isWallLeft || isWallRight;
 
         isWallSliding =
             isTouchingWall &&
             pressingIntoWall &&
             !isGrounded &&
-            rb.linearVelocity.y < 0;
+            rb.linearVelocity.y < 0f;
 
-        if (isWallSliding)
+        if (isWallSliding && !isWallJumping)
         {
             wallJumpCounter = wallJumpBuffer;
 
-            rb.linearVelocity = new Vector3(
-                rb.linearVelocity.x,
-                wallSlideSpeed,
-                0f
+            Vector3 velocity = rb.linearVelocity;
+            velocity.y = Mathf.Max(
+                velocity.y,
+                wallSlideSpeed
             );
+
+            rb.linearVelocity = velocity;
         }
         else
         {
-            wallJumpCounter -= Time.deltaTime;
+            wallJumpCounter = Mathf.Max(
+                0f,
+                wallJumpCounter - Time.deltaTime
+            );
         }
+
+        Debug.DrawRay(
+            transform.position,
+            Vector3.right * wallCheckDistance,
+            isWallRight ? Color.green : Color.red
+        );
+
+        Debug.DrawRay(
+            transform.position,
+            Vector3.left * wallCheckDistance,
+            isWallLeft ? Color.green : Color.red
+        );
     }
 
     void WallJump()
     {
-        if (jumpPressed &&
-            wallJumpCounter > 0)
+        if (jumpPressed && wallJumpCounter > 0f)
         {
             isWallJumping = true;
+            wallJumpLockCounter = wallJumpLockTime;
 
-            wallJumpLockCounter =
-                wallJumpLockTime;
+            float direction = isWallLeft ? 1f : -1f;
 
-            float direction =
-                isWallLeft ? 1f : -1f;
+            Vector3 velocity = rb.linearVelocity;
+            velocity.x = direction * wallJumpForceX;
+            velocity.y = wallJumpForceY;
+            velocity.z = 0f;
 
-            rb.linearVelocity = Vector3.zero;
+            rb.linearVelocity = velocity;
 
-            rb.AddForce(
-                new Vector3(
-                    direction * wallJumpForceX,
-                    wallJumpForceY,
-                    0f
-                ),
-                ForceMode.Impulse
-            );
+            if (jumpGrunt != null && jumpAudioSource != null)
+            {
+                jumpAudioSource.PlayOneShot(jumpGrunt);
+            }
 
-            wallJumpCounter = 0;
+            wallJumpCounter = 0f;
+            coyoteCounter = 0f;
+
+            // Consume this press so it cannot also trigger
+            // a normal jump in HandleJumpInput().
+            jumpPressed = false;
+            jumpBufferCounter = 0f;
+
+            // IMPORTANT:
+            // Do not reset or decrement jumpsRemaining here.
+            // Wall jumps are independent of normal jumps.
         }
 
         if (isWallJumping)
         {
-            wallJumpLockCounter -=
-                Time.deltaTime;
+            wallJumpLockCounter -= Time.deltaTime;
 
-            if (wallJumpLockCounter <= 0)
+            if (wallJumpLockCounter <= 0f)
             {
+                wallJumpLockCounter = 0f;
                 isWallJumping = false;
             }
         }
     }
 
+    void UpdateFootsteps()
+    {
+        bool moving = Mathf.Abs(moveInput) > 0.1f;
+
+        // Stop running sounds while airborne, stationary,
+        // or being pulled by the grappling hook.
+        if (!isGrounded ||
+            !moving ||
+            (grapplingHook != null && grapplingHook.IsGrappling))
+        {
+            if (runningAudioSource != null)
+                runningAudioSource.Stop();
+
+            currentRunningClip = null;
+            footstepTimer = 0f;
+            return;
+        }
+
+        AudioClip desiredClip = normalRunning;
+
+        // Detect the surface immediately beneath the player.
+        if (groundCheck != null &&
+            Physics.Raycast(
+                groundCheck.position,
+                Vector3.down,
+                out RaycastHit hit,
+                groundCheckDistance + 0.2f,
+                Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Ignore))
+        {
+            string materialName = "";
+
+            if (hit.collider.sharedMaterial != null)
+            {
+                materialName =
+                    hit.collider.sharedMaterial.name.ToLower();
+            }
+
+            // Use a physics material named something like Metal.
+            if (materialName.Contains("metal"))
+            {
+                desiredClip = metalRunning;
+            }
+        }
+
+        if (desiredClip == null)
+        {
+            runningAudioSource.Stop();
+            currentRunningClip = null;
+            return;
+        }
+
+        // Keep the existing looping running-audio behavior.
+        if (currentRunningClip != desiredClip ||
+            !runningAudioSource.isPlaying)
+        {
+            runningAudioSource.clip = desiredClip;
+            runningAudioSource.loop = true;
+            runningAudioSource.Play();
+            currentRunningClip = desiredClip;
+        }
+    }
 }
