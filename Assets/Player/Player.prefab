@@ -168,6 +168,10 @@ MonoBehaviour:
   maxJumps: 2
   groundCheck: {fileID: 2426192825102869077}
   groundCheckDistance: 0.2
+  groundCheckRadius: 0.15
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
   coyoteTime: 0.15
   jumpBufferTime: 0.15
   fallMultiplier: 2.5
@@ -175,10 +179,13 @@ MonoBehaviour:
   maxFallSpeed: -20
   apexThreshold: 1
   apexGravityMultiplier: 0.5
+  wallCheckDistance: 0.6
+  wallLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
   wallSlideSpeed: -3
   wallJumpForceX: 6
   wallJumpForceY: 8
-  wallJumpBuffer: 0.3
   wallJumpLockTime: 0.4
 --- !u!120 &2406686916362084386
 LineRenderer:
@@ -305,9 +312,12 @@ MonoBehaviour:
   playerCamera: {fileID: 0}
   gunTip: {fileID: 9219680448756898720}
   rope: {fileID: 2406686916362084386}
+  rouletteController: {fileID: 0}
   maxDistance: 40
   grappleSpeed: 25
+  grappleAcceleration: 35
   stopDistance: 1
+  approachStrength: 5
 --- !u!1 &2277090593009908917
 GameObject:
   m_ObjectHideFlags: 0
@@ -381,6 +391,7 @@ GameObject:
   - component: {fileID: 1086372704256866496}
   - component: {fileID: 7034533308430777102}
   - component: {fileID: 1349623199069296265}
+  - component: {fileID: 2503822974419347917}
   m_Layer: 0
   m_Name: Player Camera
   m_TagString: Untagged
@@ -397,7 +408,7 @@ Transform:
   m_GameObject: {fileID: 9154863939513695606}
   serializedVersion: 2
   m_LocalRotation: {x: 0.04981319, y: -0.00022656703, z: -0.0045426395, w: 0.99874824}
-  m_LocalPosition: {x: 3.0362465, y: 3.9725451, z: -10}
+  m_LocalPosition: {x: 0.036385912, y: 3.9998345, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -464,4 +475,25 @@ MonoBehaviour:
     AngularDampingMode: 0
     RotationDamping: {x: 1, y: 1, z: 1}
     QuaternionDamping: 1
-  FollowOffset: {x: 3, y: 4, z: -10}
+  FollowOffset: {x: 0, y: 4, z: -10}
+--- !u!114 &2503822974419347917
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9154863939513695606}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b85950c939eed94478ba3b38d8c6e51b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraLookAhead
+  player: {fileID: 4617529844838215052}
+  lookAhead: 3
+  smoothTime: 0.35
+  minSpeedToTurn: 0.5
+  turnDelay: 0.25
+  wallMargin: 0.75
+  wallLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295

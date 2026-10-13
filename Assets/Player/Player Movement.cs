@@ -46,7 +46,6 @@ public class PlayerMovement : MonoBehaviour
     private Rigidbody rb;
     private GrapplingHook grapplingHook;
 
-
     [Header("Player Audio")]
     public AudioClip jumpGrunt;
     public AudioClip normalRunning;
@@ -61,7 +60,7 @@ public class PlayerMovement : MonoBehaviour
     private AudioClip currentRunningClip;
 
 
-    public bool isGrounded;
+    public bool isGrounded { get; private set; }
     private bool wasGrounded;
     private bool isTouchingWall;
     private bool isWallLeft;
@@ -76,13 +75,11 @@ public class PlayerMovement : MonoBehaviour
     private bool jumpPressed;
     private bool jumpHeld;
 
-
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         grapplingHook = GetComponent<GrapplingHook>();
         jumpsRemaining = maxJumps;
-
         // Separate sources allow jumping and running sounds
         // to work independently.
         jumpAudioSource = gameObject.AddComponent<AudioSource>();
@@ -255,15 +252,12 @@ public class PlayerMovement : MonoBehaviour
             return;
     }
 
-
     void PerformJump()
     {
-        // Play the jump sound.
         if (jumpGrunt != null)
         {
             jumpAudioSource.PlayOneShot(jumpGrunt);
         }
-
         float force = jumpForce;
 
         if (rb.linearVelocity.y < 0)
@@ -276,7 +270,6 @@ public class PlayerMovement : MonoBehaviour
             ForceMode.Impulse
         );
     }
-
 
     void BetterJump()
     {
