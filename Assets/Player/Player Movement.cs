@@ -1,6 +1,8 @@
+
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+[RequireComponent(typeof(Rigidbody))]
 public class PlayerMovement : MonoBehaviour
 {
     [Header("Movement")]
@@ -11,11 +13,16 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Jump")]
     public float jumpForce = 12f;
+
+    [Tooltip("Total normal jumps per airtime. 2 = ground jump + double jump.")]
+    [Min(1)]
     public int maxJumps = 2;
 
     [Header("Ground Check")]
     public Transform groundCheck;
     public float groundCheckDistance = 0.15f;
+    public float groundCheckRadius = 0.15f;
+    public LayerMask groundLayer = ~0;
 
     [Header("Jump Feel")]
     public float coyoteTime = 0.15f;
@@ -28,67 +35,67 @@ public class PlayerMovement : MonoBehaviour
     public float apexThreshold = 1f;
     public float apexGravityMultiplier = 0.5f;
 
+    [Header("Wall Detection")]
+    public float wallCheckDistance = 0.6f;
+    public LayerMask wallLayer = ~0;
+
     [Header("Wall Slide")]
     public float wallSlideSpeed = -3f;
 
     [Header("Wall Jump")]
     public float wallJumpForceX = 8f;
     public float wallJumpForceY = 12f;
-    public float wallJumpBuffer = 0.2f;
     public float wallJumpLockTime = 0.15f;
-
-    private float wallJumpCounter;
-    private float wallJumpLockCounter;
-
-    private bool isWallJumping;
-    private bool isWallSliding;
 
     private Rigidbody rb;
     private GrapplingHook grapplingHook;
 
-    private bool isGrounded;
+    public bool isGrounded { get; private set; }
+
     private bool wasGrounded;
-    private bool isTouchingWall;
     private bool isWallLeft;
     private bool isWallRight;
+    private bool isWallSliding;
+    private bool isWallJumping;
 
-    private int jumpsRemaining;
+    // Normal jumps used. Wall jumps never modify this counter.
+    private int jumpsUsed;
 
     private float coyoteCounter;
     private float jumpBufferCounter;
+    private float wallJumpLockCounter;
 
     private float moveInput;
     private bool jumpPressed;
     private bool jumpHeld;
 
-    void Start()
+    void Awake()
     {
         rb = GetComponent<Rigidbody>();
         grapplingHook = GetComponent<GrapplingHook>();
-        jumpsRemaining = maxJumps;
+
+        jumpsUsed = 0;
     }
 
     void Update()
     {
         ReadInput();
 
-        // Don't let jumping and wall-jump logic fight the grapple.
         if (grapplingHook != null && grapplingHook.IsGrappling)
         {
-            jumpPressed = false;
             jumpBufferCounter = 0f;
+            jumpPressed = false;
             return;
         }
 
         CheckGround();
         CheckWall();
-        WallJump();
+        UpdateWallJumpLock();
         HandleJumpInput();
     }
 
     void FixedUpdate()
     {
-        // The grapple controls the Rigidbody while pulling.
         if (grapplingHook != null && grapplingHook.IsGrappling)
             return;
 
@@ -116,30 +123,42 @@ public class PlayerMovement : MonoBehaviour
 
     void CheckGround()
     {
-        isGrounded = Physics.Raycast(
-            groundCheck.position,
-            Vector3.down,
-            groundCheckDistance
-        );
+        bool groundedNow = false;
+
+        if (groundCheck != null)
+        {
+            groundedNow = Physics.SphereCast(
+                groundCheck.position,
+                groundCheckRadius,
+                Vector3.down,
+                out _,
+                groundCheckDistance,
+                groundLayer,
+                QueryTriggerInteraction.Ignore
+            );
+        }
+
+        isGrounded = groundedNow;
 
         Debug.DrawRay(
-            groundCheck.position,
+            groundCheck != null ? groundCheck.position : transform.position,
             Vector3.down * groundCheckDistance,
             isGrounded ? Color.green : Color.red
         );
 
-        if (isGrounded)
+        // Reset normal jumps only while actually grounded and descending
+        // or standing. This avoids resetting them while rising past an edge.
+        if (isGrounded && rb.linearVelocity.y <= 0.1f)
         {
+            jumpsUsed = 0;
             coyoteCounter = coyoteTime;
-
-            if (!wasGrounded)
-            {
-                jumpsRemaining = maxJumps;
-            }
         }
         else
         {
-            coyoteCounter -= Time.deltaTime;
+            coyoteCounter = Mathf.Max(
+                0f,
+                coyoteCounter - Time.deltaTime
+            );
         }
 
         wasGrounded = isGrounded;
@@ -147,12 +166,13 @@ public class PlayerMovement : MonoBehaviour
 
     void Move()
     {
+        // Preserve the initial push away from the wall.
+        if (isWallJumping)
+            return;
+
         float targetSpeed = moveInput * moveSpeed;
 
         float accelRate;
-
-        if (isWallJumping)
-            return;
 
         if (isGrounded)
         {
@@ -167,197 +187,207 @@ public class PlayerMovement : MonoBehaviour
                 : deceleration * airControl;
         }
 
-        float speedDifference =
-            targetSpeed - rb.linearVelocity.x;
-
-        float movement =
-            speedDifference * accelRate;
+        float speedDifference = targetSpeed - rb.linearVelocity.x;
+        float movement = speedDifference * accelRate;
 
         rb.AddForce(
-            movement * Vector3.right,
+            Vector3.right * movement,
             ForceMode.Force
         );
 
-        Vector3 vel = rb.linearVelocity;
+        Vector3 velocity = rb.linearVelocity;
 
-        vel.x = Mathf.Clamp(
-            vel.x,
+        velocity.x = Mathf.Clamp(
+            velocity.x,
             -moveSpeed,
             moveSpeed
         );
 
-        rb.linearVelocity = vel;
+        // Keep the game constrained to its existing 2.5D plane.
+        velocity.z = 0f;
+
+        rb.linearVelocity = velocity;
     }
 
     void HandleJumpInput()
     {
         if (jumpPressed)
-        {
             jumpBufferCounter = jumpBufferTime;
-        }
         else
-        {
-            jumpBufferCounter -= Time.deltaTime;
-        }
+            jumpBufferCounter = Mathf.Max(
+                0f,
+                jumpBufferCounter - Time.deltaTime
+            );
 
-        if (jumpBufferCounter > 0)
-        {
-            if (isGrounded || coyoteCounter > 0)
-            {
-                PerformJump();
-
-                jumpsRemaining = maxJumps - 1;
-
-                jumpBufferCounter = 0;
-                coyoteCounter = 0;
-            }
-            else if (jumpsRemaining > 0)
-            {
-                PerformJump();
-
-                jumpsRemaining--;
-
-                jumpBufferCounter = 0;
-            }
-        }
-
-        if (isWallJumping)
+        if (jumpBufferCounter <= 0f)
             return;
+
+        // Wall jump gets priority and consumes this jump press.
+        if (!isGrounded && (isWallLeft || isWallRight))
+        {
+            bool pressingIntoWall =
+                (isWallRight && moveInput > 0f) ||
+                (isWallLeft && moveInput < 0f);
+
+            if (pressingIntoWall && TryWallJump())
+                return;
+        }
+
+        // Ground jump or coyote jump.
+        if (isGrounded || coyoteCounter > 0f)
+        {
+            PerformNormalJump();
+
+            jumpBufferCounter = 0f;
+            coyoteCounter = 0f;
+            return;
+        }
+
+        // Additional normal jumps, independent of wall jumps.
+        if (jumpsUsed < maxJumps)
+        {
+            PerformNormalJump();
+            jumpBufferCounter = 0f;
+        }
     }
 
-    void PerformJump()
+    void PerformNormalJump()
     {
-        float force = jumpForce;
-
-        if (rb.linearVelocity.y < 0)
-        {
-            force -= rb.linearVelocity.y;
-        }
+        Vector3 velocity = rb.linearVelocity;
+        velocity.y = 0f;
+        rb.linearVelocity = velocity;
 
         rb.AddForce(
-            Vector3.up * force,
+            Vector3.up * jumpForce,
             ForceMode.Impulse
         );
-    }
 
-    void BetterJump()
-    {
-        if (Mathf.Abs(rb.linearVelocity.y) < apexThreshold)
-        {
-            rb.AddForce(
-                Vector3.up *
-                Physics.gravity.y *
-                (apexGravityMultiplier - 1),
-                ForceMode.Acceleration
-            );
-        }
-
-        if (rb.linearVelocity.y < 0)
-        {
-            rb.linearVelocity += Vector3.up *
-                                 Physics.gravity.y *
-                                 (fallMultiplier - 1) *
-                                 Time.fixedDeltaTime;
-        }
-
-        if (rb.linearVelocity.y > 0 && !jumpHeld)
-        {
-            rb.linearVelocity += Vector3.up *
-                                 Physics.gravity.y *
-                                 (lowJumpMultiplier - 1) *
-                                 Time.fixedDeltaTime;
-        }
-
-        if (rb.linearVelocity.y < maxFallSpeed)
-        {
-            rb.linearVelocity = new Vector3(
-                rb.linearVelocity.x,
-                maxFallSpeed,
-                0f
-            );
-        }
+        jumpsUsed++;
     }
 
     void CheckWall()
     {
         isWallRight = Physics.Raycast(
             transform.position,
-            transform.right,
-            1.2f
+            Vector3.right,
+            wallCheckDistance,
+            wallLayer,
+            QueryTriggerInteraction.Ignore
         );
 
         isWallLeft = Physics.Raycast(
             transform.position,
-            -transform.right,
-            1.2f
+            Vector3.left,
+            wallCheckDistance,
+            wallLayer,
+            QueryTriggerInteraction.Ignore
         );
 
         bool pressingIntoWall =
-            (isWallRight && moveInput > 0) ||
-            (isWallLeft && moveInput < 0);
-
-        isTouchingWall =
-            isWallLeft || isWallRight;
+            (isWallRight && moveInput > 0f) ||
+            (isWallLeft && moveInput < 0f);
 
         isWallSliding =
-            isTouchingWall &&
-            pressingIntoWall &&
             !isGrounded &&
-            rb.linearVelocity.y < 0;
+            pressingIntoWall &&
+            rb.linearVelocity.y < 0f;
 
-        if (isWallSliding)
+        if (isWallSliding && !isWallJumping)
         {
-            wallJumpCounter = wallJumpBuffer;
-
-            rb.linearVelocity = new Vector3(
-                rb.linearVelocity.x,
-                wallSlideSpeed,
-                0f
+            Vector3 velocity = rb.linearVelocity;
+            velocity.y = Mathf.Max(
+                velocity.y,
+                wallSlideSpeed
             );
+
+            rb.linearVelocity = velocity;
         }
-        else
-        {
-            wallJumpCounter -= Time.deltaTime;
-        }
+
+        Debug.DrawRay(
+            transform.position,
+            Vector3.right * wallCheckDistance,
+            isWallRight ? Color.green : Color.red
+        );
+
+        Debug.DrawRay(
+            transform.position,
+            Vector3.left * wallCheckDistance,
+            isWallLeft ? Color.green : Color.red
+        );
     }
 
-    void WallJump()
+    bool TryWallJump()
     {
-        if (jumpPressed &&
-            wallJumpCounter > 0)
+        float direction = isWallRight ? -1f : 1f;
+
+        isWallJumping = true;
+        wallJumpLockCounter = wallJumpLockTime;
+
+        Vector3 velocity = rb.linearVelocity;
+
+        // Apply a predictable launch away from the wall.
+        velocity.x = direction * wallJumpForceX;
+        velocity.y = wallJumpForceY;
+        velocity.z = 0f;
+
+        rb.linearVelocity = velocity;
+
+        // IMPORTANT:
+        // Do not change jumpsUsed here.
+        // Wall jumps are unlimited and independent of double jump.
+
+        jumpBufferCounter = 0f;
+        coyoteCounter = 0f;
+
+        return true;
+    }
+
+    void UpdateWallJumpLock()
+    {
+        if (!isWallJumping)
+            return;
+
+        wallJumpLockCounter -= Time.deltaTime;
+
+        if (wallJumpLockCounter <= 0f)
         {
-            isWallJumping = true;
-
-            wallJumpLockCounter =
-                wallJumpLockTime;
-
-            float direction =
-                isWallLeft ? 1f : -1f;
-
-            rb.linearVelocity = Vector3.zero;
-
-            rb.AddForce(
-                new Vector3(
-                    direction * wallJumpForceX,
-                    wallJumpForceY,
-                    0f
-                ),
-                ForceMode.Impulse
-            );
-
-            wallJumpCounter = 0;
-        }
-
-        if (isWallJumping)
-        {
-            wallJumpLockCounter -=
-                Time.deltaTime;
-
-            if (wallJumpLockCounter <= 0)
-            {
-                isWallJumping = false;
-            }
+            wallJumpLockCounter = 0f;
+            isWallJumping = false;
         }
     }
 
+    void BetterJump()
+    {
+        Vector3 velocity = rb.linearVelocity;
+
+        if (Mathf.Abs(velocity.y) < apexThreshold)
+        {
+            rb.AddForce(
+                Vector3.up *
+                Physics.gravity.y *
+                (apexGravityMultiplier - 1f),
+                ForceMode.Acceleration
+            );
+        }
+
+        velocity = rb.linearVelocity;
+
+        if (velocity.y < 0f)
+        {
+            velocity.y += Physics.gravity.y *
+                          (fallMultiplier - 1f) *
+                          Time.fixedDeltaTime;
+        }
+        else if (velocity.y > 0f && !jumpHeld)
+        {
+            velocity.y += Physics.gravity.y *
+                          (lowJumpMultiplier - 1f) *
+                          Time.fixedDeltaTime;
+        }
+
+        velocity.y = Mathf.Max(velocity.y, maxFallSpeed);
+        velocity.z = 0f;
+
+        rb.linearVelocity = velocity;
+    }
 }
