@@ -1,5 +1,64 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &41108799627711677
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 392735276107020156}
+  - component: {fileID: 6648363194405219016}
+  m_Layer: 5
+  m_Name: TutorialHints
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &392735276107020156
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 41108799627711677}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7237638087817969381}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &6648363194405219016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 41108799627711677}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7acd66cb917d094cb3c295802d6cda2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MaxTech.UI.TutorialHints
+  onlyInScene: Level 1
+  steps: []
+  fontSize: 3
+  textColor: {r: 0.78039217, g: 0.6039216, b: 0.2901961, a: 1}
+  keyColor: {r: 0.9098039, g: 0.78039217, b: 0.47843137, a: 1}
+  doneColor: {r: 0.9490196, g: 0.9019608, b: 0.78431374, a: 1}
+  outlineColor: {r: 0.101960786, g: 0.08627451, b: 0.07058824, a: 1}
+  outlineWidth: 0.25
+  showDistance: 6
+  bobHeight: 0.15
+  bobSpeed: 2
 --- !u!1 &153594764008703455
 GameObject:
   m_ObjectHideFlags: 0
@@ -3677,6 +3736,8 @@ MonoBehaviour:
   emptyColor: {r: 0.2901961, g: 0.25882354, b: 0.22745098, a: 1}
   punchScale: 1.4
   punchDuration: 0.3
+  shakeAngle: 25
+  shakeDuration: 0.45
 --- !u!1 &3519919215819821757
 GameObject:
   m_ObjectHideFlags: 0
@@ -5529,6 +5590,7 @@ RectTransform:
   - {fileID: 294213054105242257}
   - {fileID: 4654556430157663398}
   - {fileID: 8478298707002650472}
+  - {fileID: 392735276107020156}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
