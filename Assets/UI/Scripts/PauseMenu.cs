@@ -34,7 +34,8 @@ namespace MaxTech.UI
 
         void Update()
         {
-            if (GameOverScreen.IsShown || LevelCompleteScreen.IsShown) return; // no pausing on top of end screens
+            if (GameOverScreen.IsShown || LevelCompleteScreen.IsShown) return;
+            if (ScreenFader.IsFading) return; // a scene is about to load // no pausing on top of end screens
             if (SettingsMenu.IsOpen || SettingsMenu.LastClosedFrame == Time.frameCount) return; // Esc closes Settings first
 
             bool togglePressed =
@@ -46,7 +47,8 @@ namespace MaxTech.UI
 
         public void Resume() => SetPaused(false);
 
-        public void Restart()
+        // The game stays paused under the fade; it's unpaused right before the scene reloads.
+        public void Restart() => ScreenFader.FadeOutThen(() =>
         {
             SetPaused(false);
             Scene scene = SceneManager.GetActiveScene();
@@ -57,7 +59,7 @@ namespace MaxTech.UI
 #else
             SceneManager.LoadScene(scene.buildIndex);
 #endif
-        }
+        });
 
         public void LoadMainMenu()
         {
@@ -66,8 +68,11 @@ namespace MaxTech.UI
                 Debug.LogWarning($"PauseMenu: scene '{mainMenuScene}' isn't in Build Profiles yet.", this);
                 return;
             }
-            SetPaused(false);
-            SceneManager.LoadScene(mainMenuScene);
+            ScreenFader.FadeOutThen(() =>
+            {
+                SetPaused(false);
+                SceneManager.LoadScene(mainMenuScene);
+            });
         }
 
         public void Quit()

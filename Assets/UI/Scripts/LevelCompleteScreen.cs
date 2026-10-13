@@ -104,22 +104,25 @@ namespace MaxTech.UI
 
         public void Continue()
         {
-            Time.timeScale = 1f;
-            IsShown = false;
-
             if (string.IsNullOrEmpty(nextScene))
             {
                 LoadMainMenu(); // last level: nothing comes next
                 return;
             }
 
-            if (LevelSpawnManager.Instance != null)
-                LevelSpawnManager.Instance.LoadLevel(nextScene, nextSpawnPoint);
-            else
-                SceneManager.LoadScene(nextScene);
+            ScreenFader.FadeOutThen(() =>
+            {
+                Time.timeScale = 1f;
+                IsShown = false;
+
+                if (LevelSpawnManager.Instance != null)
+                    LevelSpawnManager.Instance.LoadLevel(nextScene, nextSpawnPoint);
+                else
+                    SceneManager.LoadScene(nextScene);
+            });
         }
 
-        public void Replay()
+        public void Replay() => ScreenFader.FadeOutThen(() =>
         {
             Time.timeScale = 1f;
             IsShown = false;
@@ -130,7 +133,7 @@ namespace MaxTech.UI
 #else
             SceneManager.LoadScene(scene.buildIndex);
 #endif
-        }
+        });
 
         public void LoadMainMenu()
         {
@@ -139,9 +142,12 @@ namespace MaxTech.UI
                 Debug.LogWarning($"LevelCompleteScreen: scene '{mainMenuScene}' isn't in Build Profiles yet.", this);
                 return;
             }
-            Time.timeScale = 1f;
-            IsShown = false;
-            SceneManager.LoadScene(mainMenuScene);
+            ScreenFader.FadeOutThen(() =>
+            {
+                Time.timeScale = 1f;
+                IsShown = false;
+                SceneManager.LoadScene(mainMenuScene);
+            });
         }
 
         // Right-click the component header in Play mode → "Test: Show Level Complete".
