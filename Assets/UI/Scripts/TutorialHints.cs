@@ -15,7 +15,8 @@ namespace MaxTech.UI
     /// Select this object in the Scene view to see where every hint and wall will appear.
     public class TutorialHints : MonoBehaviour
     {
-        public enum Action { Move, Jump, DoubleJump, WallJump, OpenRoulette, Grapple, WalkPast }
+        // New actions go at the end: the Inspector saves these as numbers.
+        public enum Action { Move, Jump, DoubleJump, WallJump, OpenRoulette, Grapple, WalkPast, LookMode, LookModeOff }
         public enum Ability { None, Roulette, Grapple }
 
         [Serializable]
@@ -28,6 +29,8 @@ namespace MaxTech.UI
             public Action completeWhen = Action.Move;
             [Tooltip("Switched on when this step starts (locked before).")]
             public Ability unlocks = Ability.None;
+            [Tooltip("How close the player must be for this hint. 0 = use the Show Distance below.")]
+            public float showDistance;
             [Tooltip("Put an invisible wall at Wall X until this step is done.")]
             public bool blockPath;
             public float wallX;
@@ -59,6 +62,7 @@ namespace MaxTech.UI
         PlayerMovement movement;
         GrapplingHook hook;
         RussianRouletteController roulette;
+        CameraMouseLook[] lookers = new CameraMouseLook[0];
         bool grappleUnlocked, rouletteUnlocked, finished;
 
         void Start()
@@ -77,6 +81,7 @@ namespace MaxTech.UI
             }
             hook = FindAnyObjectByType<GrapplingHook>();
             roulette = FindAnyObjectByType<RussianRouletteController>();
+            lookers = FindObjectsByType<CameraMouseLook>();
 
             // Abilities that a step unlocks start locked.
             grappleUnlocked = !steps.Exists(s => s.unlocks == Ability.Grapple);
@@ -96,9 +101,10 @@ namespace MaxTech.UI
                 return;
             }
 
+            // Locks are applied in LateUpdate, not here: switching the roulette off before its own
+            // Start() runs would skip Start(), and its UI would stay on screen.
             Step step = steps[current];
             Unlock(step.unlocks);
-            ApplyLocks();
 
             text = SpawnText(step);
             if (step.blockPath) wall = SpawnWall(step);
@@ -111,7 +117,8 @@ namespace MaxTech.UI
             Step step = steps[current];
             text.transform.position = step.position + Vector3.up * (Mathf.Sin(Time.time * bobSpeed) * bobHeight);
 
-            bool near = Vector2.Distance(player.position, step.position) <= showDistance;
+            float range = step.showDistance > 0f ? step.showDistance : showDistance;
+            bool near = Vector2.Distance(player.position, step.position) <= range;
             text.alpha = Mathf.MoveTowards(text.alpha, near ? 1f : 0f, Time.deltaTime * 3f);
 
             if (near && IsDone(step)) CompleteStep();
@@ -159,7 +166,17 @@ namespace MaxTech.UI
                 case Action.OpenRoulette: return roulette != null && roulette.IsOpen;
                 case Action.Grapple:      return hook != null && hook.IsGrappling;
                 case Action.WalkPast:     return player.position.x > step.position.x + 2f;
+                case Action.LookMode:     return kb != null && kb.qKey.wasPressedThisFrame; // CameraMouseLook toggle
+                case Action.LookModeOff:  return !AnyLookModeOn(); // done once Q has switched look mode off
             }
+            return false;
+        }
+
+        // Level 1 has CameraMouseLook on the Player and on a scene camera, so check them all.
+        bool AnyLookModeOn()
+        {
+            foreach (CameraMouseLook look in lookers)
+                if (look != null && look.IsGrappleMode) return true;
             return false;
         }
 
@@ -241,6 +258,11 @@ namespace MaxTech.UI
                 Gizmos.color = textColor;
                 Gizmos.DrawWireCube(step.position, new Vector3(4f, 1f, 0.1f));
                 UnityEditor.Handles.Label(step.position, $"{i + 1}. {step.text}");
+
+                // Range circle: the player must be inside it for this hint to show.
+                float range = step.showDistance > 0f ? step.showDistance : showDistance;
+                UnityEditor.Handles.color = new Color(textColor.r, textColor.g, textColor.b, 0.35f);
+                UnityEditor.Handles.DrawWireDisc(step.position, Vector3.forward, range);
 
                 if (step.blockPath)
                 {

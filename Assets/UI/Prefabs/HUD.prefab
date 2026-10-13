@@ -49,7 +49,63 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MaxTech.UI.TutorialHints
   onlyInScene: Level 1
-  steps: []
+  steps:
+  - text: Press [A] [D] to move
+    position: {x: -33, y: 3.75, z: 0.5}
+    completeWhen: 0
+    unlocks: 0
+    showDistance: 0
+    blockPath: 0
+    wallX: -28
+  - text: Press [Space] to jump<br>Hold [Space] to jump higher
+    position: {x: -22, y: 3.75, z: 0.5}
+    completeWhen: 1
+    unlocks: 0
+    showDistance: 0
+    blockPath: 0
+    wallX: -17
+  - text: Press [Space] [Space] to double jump
+    position: {x: 29, y: 22, z: 0.5}
+    completeWhen: 2
+    unlocks: 0
+    showDistance: 0
+    blockPath: 1
+    wallX: 42
+  - text: Press [R] to play Russian roulette<br>Each win gives a grapple charge
+    position: {x: 62, y: 37.5, z: 0.5}
+    completeWhen: 4
+    unlocks: 1
+    showDistance: 5
+    blockPath: 1
+    wallX: 70
+  - text: Press [Q] to look around<br>Move the mouse up to see higher
+    position: {x: 62, y: 37.5, z: 0.5}
+    completeWhen: 7
+    unlocks: 0
+    showDistance: 5
+    blockPath: 0
+    wallX: 70
+  - text: Press [Right Click] to grapple<br>[Left Click] to let go
+    position: {x: 62, y: 37.5, z: 0.5}
+    completeWhen: 5
+    unlocks: 2
+    showDistance: 5
+    blockPath: 1
+    wallX: 70
+  - text: Press [Q] again to stop looking around
+    position: {x: 65, y: 40, z: 0.5}
+    completeWhen: 8
+    unlocks: 0
+    showDistance: 3
+    blockPath: 0
+    wallX: 260
+  - text: Hold [A] or [D] towards the wall<br>and press [Space] to wall jump
+    position: {x: 260, y: 3.75, z: 0.5}
+    completeWhen: 3
+    unlocks: 0
+    showDistance: 0
+    blockPath: 0
+    wallX: 260
   fontSize: 3
   textColor: {r: 0.78039217, g: 0.6039216, b: 0.2901961, a: 1}
   keyColor: {r: 0.9098039, g: 0.78039217, b: 0.47843137, a: 1}
