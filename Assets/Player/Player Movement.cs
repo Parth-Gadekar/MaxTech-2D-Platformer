@@ -43,6 +43,18 @@ public class PlayerMovement : MonoBehaviour
     public float wallJumpBuffer = 0.2f;
     public float wallJumpLockTime = 0.15f;
 
+    [Header("Landing")]
+    public float minFallSpeedForLock = 9f;   // slower landings don't lock at all
+    public float landLockMin = 0.06f;        // seconds, gentlest locked landing
+    public float landLockMax = 0.18f; 
+    
+    [Header("Aiming")]
+    [Range(0f, 1f)] public float aimMoveMultiplier = 0f;   // 0 = stand still while aiming
+    public bool IsAiming { get; set; }       // seconds, hardest landing
+
+    private float landLockCounter;
+    private float peakFallSpeed;
+
     [Header("Player Audio")]
     public AudioClip jumpGrunt;
     public AudioClip normalRunning;
@@ -56,9 +68,11 @@ public class PlayerMovement : MonoBehaviour
     private float footstepTimer;
     private AudioClip currentRunningClip;
 
-    private Rigidbody rb;
+    public Rigidbody rb;
     private GrapplingHook grapplingHook;
 
+    public event System.Action<bool> OnJump;   // true = airborne (double) jump
+    public float MoveInput => moveInput;
     public bool isGrounded { get; private set; }
 
     private bool wasGrounded;
@@ -79,6 +93,10 @@ public class PlayerMovement : MonoBehaviour
     private float moveInput;
     private bool jumpPressed;
     private bool jumpHeld;
+
+    public bool IsWallSliding => isWallSliding;
+    public int WallSide => isWallLeft ? -1 : (isWallRight ? 1 : 0);   // -1 wall on left, +1 on right
+    public event System.Action OnWallJump;
 
     void Start()
     {
@@ -173,20 +191,27 @@ public class PlayerMovement : MonoBehaviour
         {
             coyoteCounter = coyoteTime;
 
-            // Reset jumps only when landing after being airborne.
-            // Do not reset every frame while standing on the floor.
             if (!wasGrounded && rb.linearVelocity.y <= 0.1f)
             {
                 jumpsRemaining = maxJumps;
                 isWallJumping = false;
+
+                // Lock the player briefly after a real fall
+                float fallSpeed = -peakFallSpeed;
+                if (fallSpeed >= minFallSpeedForLock)
+                {
+                    float t = Mathf.InverseLerp(minFallSpeedForLock, Mathf.Abs(maxFallSpeed), fallSpeed);
+                    landLockCounter = Mathf.Lerp(landLockMin, landLockMax, t);
+                }
+                peakFallSpeed = 0f;
             }
         }
         else
         {
-            coyoteCounter = Mathf.Max(
-                0f,
-                coyoteCounter - Time.deltaTime
-            );
+            coyoteCounter = Mathf.Max(0f, coyoteCounter - Time.deltaTime);
+
+            // Remember how fast we were falling
+            peakFallSpeed = Mathf.Min(peakFallSpeed, rb.linearVelocity.y);
         }
 
         wasGrounded = isGrounded;
@@ -195,10 +220,23 @@ public class PlayerMovement : MonoBehaviour
     void Move()
     {
         // Preserve the initial push away from the wall.
+        // Brief stop after a landing so the player doesn't glide through the Land animation
+        if (landLockCounter > 0f)
+        {
+            landLockCounter -= Time.fixedDeltaTime;
+
+            Vector3 v = rb.linearVelocity;
+            v.x = 0f;
+            v.z = 0f;
+            rb.linearVelocity = v;
+            return;
+        }
+        
         if (isWallJumping)
             return;
 
-        float targetSpeed = moveInput * moveSpeed;
+        float speedLimit = IsAiming ? moveSpeed * aimMoveMultiplier : moveSpeed;
+        float targetSpeed = moveInput * speedLimit;
         float accelRate;
 
         if (isGrounded)
@@ -260,6 +298,7 @@ public class PlayerMovement : MonoBehaviour
             (isGrounded || coyoteCounter > 0f))
         {
             PerformJump();
+            OnJump?.Invoke(false);
 
             jumpsRemaining = maxJumps - 1;
             jumpBufferCounter = 0f;
@@ -271,6 +310,7 @@ public class PlayerMovement : MonoBehaviour
         if (jumpsRemaining > 0)
         {
             PerformJump();
+            OnJump?.Invoke(true); 
 
             jumpsRemaining--;
             jumpBufferCounter = 0f;
@@ -279,6 +319,7 @@ public class PlayerMovement : MonoBehaviour
 
     void PerformJump()
     {
+        landLockCounter = 0f;
         if (jumpGrunt != null && jumpAudioSource != null)
         {
             jumpAudioSource.PlayOneShot(jumpGrunt);
@@ -412,6 +453,8 @@ public class PlayerMovement : MonoBehaviour
             velocity.z = 0f;
 
             rb.linearVelocity = velocity;
+            OnWallJump?.Invoke();
+            OnJump?.Invoke(false);
 
             if (jumpGrunt != null && jumpAudioSource != null)
             {

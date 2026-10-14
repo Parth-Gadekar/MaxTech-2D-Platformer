@@ -1,115 +1,130 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using System.Collections;
 
 public class CharacterAnimationTest : MonoBehaviour
 {
-    private Animator animator;
-    public PlayerMovement movementScript;
-    [SerializeField] private Camera mainCamera;
-    [SerializeField] private float aimThreshold = 0.5f;
+    [SerializeField] PlayerMovement movementScript;
+    [SerializeField] RussianRouletteController roulette;
+    [SerializeField] float turnSpeed = 14f;
+    [SerializeField] float walkThreshold = 0.5f;
+    [SerializeField] Camera mainCamera;
+    [SerializeField] float aimDeadZonePixels = 30f;   // ignore the cursor when it's almost directly above/below the player
+    [SerializeField] bool faceWallWhileSliding = true;   // untick if the slide looks backwards
 
-    private bool jump;
-    private bool land;
-    private bool wasGrounded;
-    private bool isRoulette;
-    private bool Aim;
-
-    void Start()
-    {
-        movementScript = GetComponentInParent<PlayerMovement>();
-        wasGrounded = movementScript.isGrounded;
-    }
+    Animator animator;
+    bool aim;
+    float facingY = 270f;
 
     void Awake()
     {
         animator = GetComponent<Animator>();
+
+        if (mainCamera == null) mainCamera = Camera.main;
+        if (movementScript == null)
+            movementScript = GetComponentInParent<PlayerMovement>();
+
+        if (roulette == null)
+            roulette = FindAnyObjectByType<RussianRouletteController>();
+    }
+
+    void OnEnable()  { 
+        if (movementScript != null){ 
+            movementScript.OnJump += HandleJump;
+            movementScript.OnWallJump += HandleWallJump;
+        }
+    }
+    void OnDisable() { 
+        if (movementScript != null) {
+            movementScript.OnJump -= HandleJump;
+            movementScript.OnWallJump -= HandleWallJump;
+        }
+    }
+
+    void HandleWallJump()
+    {
+        animator.ResetTrigger("Jump");
+        animator.ResetTrigger("DoubleJump");
+        animator.SetTrigger("WallJump");
+
+        // The player is pushed away from the wall, so face that way
+        facingY = movementScript.WallSide < 0 ? 270f : 90f;
+    }
+
+    void HandleJump(bool airborne)
+    {
+        animator.ResetTrigger("Jump");
+        animator.ResetTrigger("DoubleJump");
+        animator.SetTrigger(airborne ? "DoubleJump" : "Jump");
     }
 
     void Update()
     {
-        
-        if (Keyboard.current != null)
-        {
-            if (Keyboard.current.aKey.isPressed)
-            {
-                transform.rotation = Quaternion.Euler(0, 90, 0);
-            }
-            else if (Keyboard.current.dKey.isPressed)
-            {
-                transform.rotation = Quaternion.Euler(0, 270, 0);
-            }
+        Vector3 v = movementScript.rb.linearVelocity;
+        bool grounded = movementScript.isGrounded;
 
-            // Jump animation
-            if (Keyboard.current.spaceKey.wasPressedThisFrame)
+        // Everything comes from the real physics state
+        animator.SetBool("isWalking", grounded && Mathf.Abs(v.x) > walkThreshold);
+        animator.SetBool("isGrounded", grounded);
+        animator.SetFloat("VerticalVelocity", v.y);
+        animator.SetBool("isRoulette", roulette != null && roulette.IsOpen);
+
+        float input = movementScript.MoveInput;
+
+        if (aim)
+        {
+            FaceCursor();
+        }
+        else if (Mathf.Abs(input) > 0.1f)
+        {
+            facingY = input > 0f ? 270f : 90f;
+        }
+
+        bool sliding = movementScript.IsWallSliding;
+        animator.SetBool("isWallSliding", sliding);
+
+        if (sliding)
+        {
+            if (aim) SetAim(false);   // wall slide replaces the aim pose
+
+            int side = movementScript.WallSide;
+            if (side != 0)
             {
-                    animator.SetTrigger("Jump");
+                bool faceRight = faceWallWhileSliding ? side > 0 : side < 0;
+                facingY = faceRight ? 270f : 90f;
             }
         }
 
-        if (Keyboard.current.rKey.wasPressedThisFrame)
-        {
-            if(isRoulette)
-            {
-                CloseRoulette();
-            }
-            else
-            {
-                OpenRoulette();
-            }
-        }
-        if (Keyboard.current != null &&
-        Keyboard.current.spaceKey.wasPressedThisFrame &&
-        isRoulette && isRoulette)
-    {
-        OnRouletteFinished();
+        transform.rotation = Quaternion.Slerp(
+            transform.rotation,
+            Quaternion.Euler(0f, facingY, 0f),
+            turnSpeed * Time.deltaTime
+        );
+
+        if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
+            SetAim(!aim);
+
+        // Pressing A or D cancels aiming
+        if (aim && Keyboard.current != null &&
+            (Keyboard.current.aKey.wasPressedThisFrame || Keyboard.current.dKey.wasPressedThisFrame))
+            SetAim(false);
     }
-
-
-    if (movementScript.isGrounded && !wasGrounded)
+    void SetAim(bool value)
     {
-        animator.SetTrigger("Land");
+        aim = value;
+        animator.SetBool("Aim", aim);
+        movementScript.IsAiming = aim;
     }
-
-    wasGrounded = movementScript.isGrounded;
-
-        if (animator == null || Keyboard.current == null)
-            return;
-
-        bool isWalking =
-            Keyboard.current.aKey.isPressed ||
-            Keyboard.current.dKey.isPressed;
-
-        animator.SetBool("isWalking", isWalking);
-
-        if (Mouse.current != null &&
-        Mouse.current.rightButton.wasPressedThisFrame)
-        {
-            Debug.Log("Reached mouse check");
-
-            if (Mouse.current != null &&
-                Mouse.current.rightButton.wasPressedThisFrame)
-            {
-                Aim=!Aim;
-                animator.SetBool("Aim",Aim);
-            }
-        }
-    }
-   
-    public void OpenRoulette()
+    void FaceCursor()
     {
-        isRoulette = true;
-        animator.SetBool("isRoulette", true);
-    }
+        if (mainCamera == null || Mouse.current == null) return;
 
-    public void CloseRoulette()
-    {
-        isRoulette = false;
-        animator.SetBool("isRoulette", false);
-    }
+        float playerX = mainCamera.WorldToScreenPoint(movementScript.transform.position).x;
+        float cursorX = Mouse.current.position.ReadValue().x;
+        float diff = cursorX - playerX;
 
-   public void OnRouletteFinished()
-    {
-        CloseRoulette();
+        // Cursor almost straight above or below: keep the current facing
+        if (Mathf.Abs(diff) < aimDeadZonePixels) return;
+
+        facingY = diff > 0f ? 270f : 90f;
     }
 }
