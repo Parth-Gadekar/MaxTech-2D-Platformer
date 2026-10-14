@@ -24,6 +24,15 @@ namespace MaxTech.UI
         [SerializeField] string mainMenuScene = "MainMenu";
         [SerializeField] float fadeTime = 0.5f;
 
+        [Header("Game Complete (last level, no next scene)")]
+        [SerializeField] string gameCompleteTitle = "GAME COMPLETE";
+        [TextArea(1, 3)]
+        [SerializeField] string gameCompleteMessage = "Thanks for playing!\nMore levels coming soon.";
+        [Tooltip("Label for the Continue button on the last level (it goes to the main menu).")]
+        [SerializeField] string gameCompleteButtonLabel = "MAIN MENU";
+        [Tooltip("Hidden on the last level, e.g. the separate Main Menu button (Continue already does that).")]
+        [SerializeField] GameObject[] hideOnGameComplete = new GameObject[0];
+
         string nextScene;
         string nextSpawnPoint;
 
@@ -65,8 +74,26 @@ namespace MaxTech.UI
             if (timer != null) timer.Running = false;
             Time.timeScale = 0f;
 
-            if (titleText != null) titleText.text = $"{SceneManager.GetActiveScene().name.ToUpper()} COMPLETE";
-            if (statsText != null) statsText.text = BuildStats(timer);
+            bool gameComplete = string.IsNullOrEmpty(nextScene);
+            string stats = BuildStats(timer);
+
+            if (titleText != null)
+                titleText.text = gameComplete ? gameCompleteTitle : $"{SceneManager.GetActiveScene().name.ToUpper()} COMPLETE";
+            if (statsText != null)
+            {
+                statsText.text = gameComplete ? $"{gameCompleteMessage}\n\n{stats}" : stats;
+                FitHeight(statsText);
+            }
+
+            if (gameComplete)
+            {
+                foreach (GameObject go in hideOnGameComplete)
+                    if (go != null) go.SetActive(false);
+
+                // firstSelected is the Continue button; on the last level it leads to the main menu.
+                TMP_Text label = firstSelected != null ? firstSelected.GetComponentInChildren<TMP_Text>() : null;
+                if (label != null) label.text = gameCompleteButtonLabel;
+            }
 
             for (float t = 0f; t < fadeTime; t += Time.unscaledDeltaTime)
             {
@@ -77,6 +104,15 @@ namespace MaxTech.UI
 
             if (firstSelected != null && EventSystem.current != null)
                 EventSystem.current.SetSelectedGameObject(firstSelected.gameObject);
+        }
+
+        // The overlay's layout group doesn't size its children, so grow the text box to fit
+        // its lines; the divider and buttons below then move down instead of being covered.
+        static void FitHeight(TMP_Text text)
+        {
+            text.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, text.preferredHeight);
+            if (text.transform.parent is RectTransform parent)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(parent);
         }
 
         string BuildStats(LevelTimer timer)
@@ -153,6 +189,10 @@ namespace MaxTech.UI
         // Right-click the component header in Play mode → "Test: Show Level Complete".
         [ContextMenu("Test: Show Level Complete")]
         void TestShow() => Show("Level 2", "Level2SpawnPoint");
+
+        // Right-click the component header in Play mode → "Test: Show Game Complete".
+        [ContextMenu("Test: Show Game Complete")]
+        void TestShowGameComplete() => Show(null, null);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics()
