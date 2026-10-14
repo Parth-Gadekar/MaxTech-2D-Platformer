@@ -15,8 +15,12 @@ namespace MaxTech.UI
         [Header("Feedback")]
         [SerializeField] float punchScale = 1.4f;
         [SerializeField] float punchDuration = 0.3f;
+        [Tooltip("How far (degrees) a lost heart wobbles.")]
+        [SerializeField] float shakeAngle = 25f;
+        [SerializeField] float shakeDuration = 0.45f;
 
         readonly List<float> punchTimers = new();
+        readonly List<float> shakeTimers = new();
         int shownLives = -1;
 
         void OnEnable()
@@ -38,6 +42,7 @@ namespace MaxTech.UI
                 hearts.Add(clone);
             }
             while (punchTimers.Count < hearts.Count) punchTimers.Add(0f);
+            while (shakeTimers.Count < hearts.Count) shakeTimers.Add(0f);
 
             for (int i = 0; i < hearts.Count; i++)
             {
@@ -46,7 +51,11 @@ namespace MaxTech.UI
                 hearts[i].color = full ? fullColor : emptyColor;
 
                 // Punch hearts that just changed (not on the very first update).
-                if (shownLives >= 0 && full != (i < shownLives)) punchTimers[i] = punchDuration;
+                if (shownLives >= 0 && full != (i < shownLives))
+                {
+                    punchTimers[i] = punchDuration;
+                    if (!full) shakeTimers[i] = shakeDuration; // a heart was lost
+                }
             }
             shownLives = current;
         }
@@ -60,6 +69,17 @@ namespace MaxTech.UI
                 punchTimers[i] -= Time.unscaledDeltaTime;
                 float t = 1f - Mathf.Clamp01(punchTimers[i] / punchDuration);
                 hearts[i].rectTransform.localScale = Vector3.one * Mathf.Lerp(punchScale, 1f, t * t * (3f - 2f * t));
+            }
+
+            // Rotation wobble (the layout group controls position, not rotation).
+            for (int i = 0; i < shakeTimers.Count; i++)
+            {
+                if (shakeTimers[i] <= 0f) continue;
+
+                shakeTimers[i] -= Time.unscaledDeltaTime;
+                float left = Mathf.Clamp01(shakeTimers[i] / shakeDuration);
+                float angle = Mathf.Sin((1f - left) * Mathf.PI * 6f) * shakeAngle * left;
+                hearts[i].rectTransform.localRotation = Quaternion.Euler(0f, 0f, angle);
             }
         }
     }
