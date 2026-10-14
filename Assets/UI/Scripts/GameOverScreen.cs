@@ -85,7 +85,7 @@ namespace MaxTech.UI
 
         // ---------- Buttons ----------
 
-        public void Retry()
+        public void Retry() => ScreenFader.FadeOutThen(() =>
         {
             Time.timeScale = 1f;
             IsShown = false;
@@ -97,7 +97,7 @@ namespace MaxTech.UI
 #else
             SceneManager.LoadScene(scene.buildIndex);
 #endif
-        }
+        });
 
         public void LoadMainMenu()
         {
@@ -106,9 +106,12 @@ namespace MaxTech.UI
                 Debug.LogWarning($"GameOverScreen: scene '{mainMenuScene}' isn't in Build Profiles yet.", this);
                 return;
             }
-            Time.timeScale = 1f;
-            IsShown = false;
-            SceneManager.LoadScene(mainMenuScene);
+            ScreenFader.FadeOutThen(() =>
+            {
+                Time.timeScale = 1f;
+                IsShown = false;
+                SceneManager.LoadScene(mainMenuScene);
+            });
         }
 
         // Right-click the component header in Play mode → "Test: Show Game Over".

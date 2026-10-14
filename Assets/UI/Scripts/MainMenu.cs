@@ -51,7 +51,7 @@ namespace MaxTech.UI
                 Debug.LogWarning($"MainMenu: scene '{firstLevelScene}' isn't in Build Profiles > Scene List.", this);
                 return;
             }
-            SceneManager.LoadScene(firstLevelScene);
+            ScreenFader.FadeOutThen(() => SceneManager.LoadScene(firstLevelScene));
         }
 
         public void OpenControls()
